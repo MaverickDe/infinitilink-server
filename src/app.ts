@@ -97,7 +97,7 @@ const allowedOrigins = [
 app.use(
   cors(
     {
-    origin: allowedOrigins,
+    origin: DOMAIN,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "SG-API-KEY"],
     credentials: true,
