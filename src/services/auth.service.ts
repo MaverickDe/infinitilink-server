@@ -14,7 +14,7 @@ import * as yup from 'yup';
 // import { generateUniqueNumericCode } from "../utils"
 import axios from "axios";
 import { Settings } from "../models/settings"
-import { buildPath, generateUsername, recordRateAttempt } from "../utils/utils"
+import { buildPath, generateUsername, manageGeneralError, recordRateAttempt, validateInput } from "../utils/utils"
 import { UserAuth } from "../models/userauth"
 import crypto, { randomUUID } from "crypto";
 import { decryptMessageFromKeyPair, encryptMessageFromKeyPair, generateCustomKeyPair, handleDecrypt } from "../cryptic"
@@ -22,6 +22,7 @@ import { redis } from "./redis.service"
 
 import { ERRORSMG } from "../error/error"
 import { INodes, NodesModel } from "../models/node"
+import { registerSchema } from "src/validators/auth"
 // import { ProjectCollaborator } from "../models/collaborators"
 // import { AccesscodeService } from "./accesscode.service"
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -617,6 +618,7 @@ static signupUser = async (data: {
   const session = await mongoose.startSession();
 
   try {
+    validateInput({schema:registerSchema,input:data})
     let response;
 
     await session.withTransaction(async () => {
@@ -700,8 +702,10 @@ static signupUser = async (data: {
 
     return response;
   } catch (err: any) {
-    console.error(err);
-    throw new Error(err.message || "Server error");
+    // console.error(err);
+    // throw new Error(err.message || "Server error");
+
+     manageGeneralError(err, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);
   } finally {
     session.endSession();
   }

@@ -7,7 +7,7 @@ import { EmailService } from "../services/email.service"
 
 import axios from "axios";
 import { DECORATORS, UseMiddleware } from "../middleware/auth.middleware";
-import { checkRateLimit, manageReturnedError, recordRateAttempt } from "../utils/utils";
+import { checkRateLimit, manageReturnedError, overideObj, recordRateAttempt } from "../utils/utils";
 // import { DojahService } from "src/services/dojah";
 // import { BvnService } from "../services/bvn.service";
 import { ERRORSMG } from "../error/error";
@@ -225,11 +225,23 @@ async google(req: Request, res: Response){
         ...(data??{}),
       })
     } catch (e: any) {
-      console.error("Signup error:", e)
-      return res.status(400).json({
-        status: "error",
-        message: e.message || "Registration failed",
-      })
+
+            return manageReturnedError({
+              error: e,
+              overideError: 
+              overideObj(
+
+                ERRORSMG.SOMETHING_WENT_WRONG_ERROR,{
+                  message:"Registration failed"
+                }
+              ),
+              res
+            });
+      // console.error("Signup error:", e)
+      // return res.status(400).json({
+      //   status: "error",
+      //   message: e.message || "Registration failed",
+      // })
     }
   }
   @UseMiddleware(authenticate)
