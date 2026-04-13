@@ -97,9 +97,9 @@ const allowedOrigins = [
 app.use(
   cors(
     {
-    origin: DOMAIN,
+    origin: "https://infinitilink.vercel.app",
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "SG-API-KEY"],
+    allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   }
 ),
