@@ -618,7 +618,9 @@ static signupUser = async (data: {
   const session = await mongoose.startSession();
 
   try {
-    validateInput({schema:registerSchema,input:data})
+    console.log("hi")
+    await validateInput({schema:registerSchema,input:data})
+    console.log("hiww")
     let response;
 
     await session.withTransaction(async () => {
@@ -630,7 +632,7 @@ static signupUser = async (data: {
       }
 
       const hashedPassword = await bcrypt.hash(password, 12);
-  
+  console.log("genr user")
       const newUser = new User({
         email,
   
@@ -641,7 +643,7 @@ static signupUser = async (data: {
         firstname,
         ...(ref ? { invitee: new Types.ObjectId(ref) } : {}),
       });
-
+  console.log("done genr user")
      
 
   const [node] = await NodesModel.create([{
@@ -682,8 +684,9 @@ static signupUser = async (data: {
           { upsert: true, returnDocument: "after", session }
         );
       }
-
-      await EmailService.sendVerificationEmail(email);
+console.log("sending mail")
+await EmailService.sendVerificationEmail(email);
+console.log("done sending mail")
 
       const token = this.generateToken({
         userId: newUser._id.toString(),
