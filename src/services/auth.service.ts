@@ -22,7 +22,7 @@ import { redis } from "./redis.service"
 
 import { ERRORSMG } from "../error/error"
 import { INodes, NodesModel } from "../models/node"
-import { registerSchema } from "src/validators/auth"
+import { registerSchema } from "../validators/auth"
 // import { ProjectCollaborator } from "../models/collaborators"
 // import { AccesscodeService } from "./accesscode.service"
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
