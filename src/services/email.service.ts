@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer"
 import { config } from "../config"
-import { OTPTYPE } from "../constant"
+import { OTPTYPE, production } from "../constant"
 import { OtpService } from "./otp.service"
 
 // Standardized constants for the new brand
@@ -120,6 +120,10 @@ export class EmailService {
 
   static async sendVerificationEmail(email: string): Promise<string> {
     try {
+
+      if(production){
+       return await ResendEmailService.sendVerificationEmail(email)
+      }
       const otp = await OtpService.generateOtp({ email, type: OTPTYPE.emailVerification });
       
       const html = this.wrapTemplate(`
@@ -148,6 +152,9 @@ export class EmailService {
 
   static async sendForgotPasswordEmail(email: string): Promise<string> {
     try {
+           if(production){
+       return await ResendEmailService.sendForgotPasswordEmail(email)
+      }
       const otp = await OtpService.generateOtp({ email, type: OTPTYPE.forgotPassword });
 
       const html = this.wrapTemplate(`
@@ -201,6 +208,153 @@ export class EmailService {
       await transporter.sendMail(mailOptions);
     } catch (error) {
       console.error("Failed to send welcome email:", error);
+    }
+  }
+}
+
+import { Resend } from "resend";
+
+export class ResendEmailService {
+  private static resend = new Resend(process.env.RESEND_EMAIL_API_KEY);
+
+  /**
+   * Wrap content in your HTML template
+   */
+  private static wrapTemplate(content: string) {
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            .body-wrap { 
+              background-color: ${BG_LIGHT}; 
+              font-family: 'Inter', Helvetica, Arial, sans-serif; 
+              padding: 48px 20px; 
+            }
+            .container { 
+              max-width: 600px; 
+              margin: 0 auto; 
+              background-color: #ffffff; 
+              border-radius: 24px; 
+              overflow: hidden; 
+              border: 1px solid #e2e8f0;
+            }
+            .header { padding: 40px; text-align: center; }
+            .content { padding: 0 40px 40px 40px; }
+            .footer { padding: 32px; background-color: ${SLATE_900}; text-align: center; }
+            .otp-box { 
+              background-color: ${BG_LIGHT}; 
+              border: 2px dashed #cbd5e1; 
+              border-radius: 16px; 
+              padding: 24px; 
+              font-size: 32px; 
+              text-align: center; 
+              letter-spacing: 8px; 
+              font-weight: 900; 
+              color: ${PRIMARY_BLUE};
+              margin: 24px 0;
+            }
+            .title { 
+              font-size: 28px; 
+              font-weight: 900; 
+              color: ${SLATE_900}; 
+              margin-bottom: 16px; 
+            }
+            .text { color: ${SLATE_500}; font-size: 15px; }
+          </style>
+        </head>
+        <body class="body-wrap">
+          <div class="container">
+            <div class="header">
+              <strong>${APP_NAME}</strong>
+            </div>
+            <div class="content">
+              ${content}
+            </div>
+            <div class="footer">
+              <p style="color:#64748b;font-size:10px;">
+                © ${new Date().getFullYear()} ${APP_NAME}
+              </p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+  }
+
+  // 🔐 VERIFY EMAIL
+  static async sendVerificationEmail(email: string): Promise<string> {
+    try {
+      const otp = await OtpService.generateOtp({
+        email,
+        type: OTPTYPE.emailVerification,
+      });
+
+      const html = this.wrapTemplate(`
+        <h1 class="title">Verify Your Identity</h1>
+        <p class="text">Use the code below:</p>
+        <div class="otp-box">${otp}</div>
+      `);
+
+      await this.resend.emails.send({
+        from: `${APP_NAME} <onboarding@resend.dev>`, // change later
+        to: email,
+        subject: "Verify your email",
+        html,
+      });
+
+      return otp;
+    } catch (error) {
+      console.error("Resend error:", error);
+      throw new Error("Failed to send verification email");
+    }
+  }
+
+  // 🔑 FORGOT PASSWORD
+  static async sendForgotPasswordEmail(email: string): Promise<string> {
+    try {
+      const otp = await OtpService.generateOtp({
+        email,
+        type: OTPTYPE.forgotPassword,
+      });
+
+      const html = this.wrapTemplate(`
+        <h1 class="title">Reset Your Password</h1>
+        <p class="text">Use this code:</p>
+        <div class="otp-box">${otp}</div>
+      `);
+
+      await this.resend.emails.send({
+        from: `${APP_NAME} <onboarding@resend.dev>`,
+        to: email,
+        subject: "Password reset",
+        html,
+      });
+
+      return otp;
+    } catch (error) {
+      console.error("Resend error:", error);
+      throw new Error("Failed to send password reset email");
+    }
+  }
+
+  // 🎉 WELCOME EMAIL
+  static async sendWelcomeEmail(email: string, name: string): Promise<void> {
+    try {
+      const html = this.wrapTemplate(`
+        <h1 class="title">Welcome ${name}</h1>
+        <p class="text">Your account is ready 🚀</p>
+      `);
+
+      await this.resend.emails.send({
+        from: `${APP_NAME} <onboarding@resend.dev>`,
+        to: email,
+        subject: "Welcome!",
+        html,
+      });
+    } catch (error) {
+      console.error("Resend error:", error);
     }
   }
 }

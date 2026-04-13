@@ -58,6 +58,7 @@
     "openapi-to-postmanv2": "^5.0.0",
     "redis": "^5.8.2",
     "reflect-metadata": "^0.2.2",
+    "resend": "^6.11.0",
     "rpc-websockets": "^10.0.0",
     "socket.io": "^4.8.1",
     "swagger-jsdoc": "^6.2.8",
