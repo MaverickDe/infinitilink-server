@@ -1,5 +1,6 @@
 import { Types } from "mongoose";
-
+export const EMAIL_DRIVER = "custom"
+export const APP_NAME = "Infinitilink"
 export const EVERVAULT_ENCRYPT_URL = "https://api.evervault.com/encrypt"
 export const EVERVAULT_DECRYPT_URL = "https://api.evervault.com/decrypt"
 export const production = true
@@ -51,3 +52,6 @@ export enum STATUS {
   NOTADMIN="not_admin",
   NOTAUTHTOKEN="not_auth_token"
 }
+
+
+export const APP_MAIL = "princewillasotibe123@gmail.com";

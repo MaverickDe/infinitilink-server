@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
 import { IUser, Ref, User } from "../models/user"
 import { config } from "../config"
-import { EmailService } from "./email.service"
+import { EmailService, mailer } from "./email.service"
 import {  GOOGLE_REDIRECT_URI, OTPTYPE, production, STATUS } from "../constant"
 // import { OtpService } from "../otp/service"
 import { OAuth2Client } from 'google-auth-library';
@@ -685,7 +685,7 @@ static signupUser = async (data: {
         );
       }
 console.log("sending mail")
-await EmailService.sendVerificationEmail(email);
+await mailer.sendVerificationEmail(email);
 console.log("done sending mail")
 
       const token = this.generateToken({
@@ -1145,7 +1145,7 @@ static async updateUserSetting(
         return { message: "If your email is registered, you will receive a password reset OTP." }
       }
 
-      await EmailService.sendForgotPasswordEmail(email)
+      await mailer.sendForgotPasswordEmail(email)
       return { message: "Password reset OTP sent to your email" }
     } catch (err: any) {
       console.error(err)
@@ -1192,9 +1192,9 @@ static async updateUserSetting(
       }
 
       if (type === OTPTYPE.emailVerification) {
-        await EmailService.sendVerificationEmail(email)
+        await mailer.sendVerificationEmail(email)
       } else if (type === OTPTYPE.forgotPassword) {
-        await EmailService.sendForgotPasswordEmail(email)
+        await mailer.sendForgotPasswordEmail(email)
       }
 
       return { message: "OTP sent successfully" }
@@ -1214,7 +1214,7 @@ static async updateUserSetting(
       }
 
       // if (type === OTPTYPE.emailVerification) {
-        await EmailService.sendVerificationEmail(email)
+        await mailer.sendVerificationEmail(email)
 
   
         // if(usdcWallet){

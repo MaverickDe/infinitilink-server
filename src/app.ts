@@ -18,7 +18,7 @@ import mongoSanitize from "express-mongo-sanitize";
 
 
 import { PaymentService } from "./services/payment.service";
-import { APPNAME } from "./mail/template";
+// import { APPNAME } from "./mail/templates";
 import { run } from "./utils/run";
 
 // import { socketInit } from "./controllers/socket";
@@ -39,7 +39,7 @@ import { xssSanitizerMiddleware } from "./middleware/sanitize.middleware";
 import { runIndex } from "./models/indexes";
 import { Indexroute } from "./routes";
 import { getDB } from "./models/db.connection";
-import { DOMAIN } from "./constant";
+import { APP_NAME, DOMAIN } from "./constant";
 // import { ReleasesRoutes } from "./routes/releases.routes";
 // const connectedSockets = new Map<string, any>();
 // const httpServer = createServer(app);
@@ -163,7 +163,8 @@ app.use("/api", new Indexroute().router)
 app.get("/", (req: Request, res: Response) => {
   res.json({
     status: "online",
-    message: `${APPNAME} API is running`,
+    message: `${APP_NAME
+    } API is running`,
     version: "1.0.0",
     environment: config.nodeEnv,
     timestamp: new Date().toISOString(),
