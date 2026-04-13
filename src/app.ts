@@ -39,6 +39,7 @@ import { xssSanitizerMiddleware } from "./middleware/sanitize.middleware";
 import { runIndex } from "./models/indexes";
 import { Indexroute } from "./routes";
 import { getDB } from "./models/db.connection";
+import { DOMAIN } from "./constant";
 // import { ReleasesRoutes } from "./routes/releases.routes";
 // const connectedSockets = new Map<string, any>();
 // const httpServer = createServer(app);
@@ -89,8 +90,9 @@ savebodysecretprocessenv()
 app.use(helmet())
 
 const allowedOrigins = [
-  "http://dev.localhost:3000",
+  // "http://dev.localhost:3000",
   "http://localhost:3000", // other dev URLs
+  DOMAIN,
 ];
 app.use(
   cors(
