@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken"
 import { IUser, Ref, User } from "../models/user"
 import { config } from "../config"
 import { EmailService } from "./email.service"
-import { AUTHTYPEWITHTHIRDPARTY, DOMAIN, EACCESSTYPE, GOOGLE_REDIRECT_URI, OTPTYPE, production, STATUS } from "../constant"
+import {  GOOGLE_REDIRECT_URI, OTPTYPE, production, STATUS } from "../constant"
 // import { OtpService } from "../otp/service"
 import { OAuth2Client } from 'google-auth-library';
 import mongoose, { Types } from "mongoose"

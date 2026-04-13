@@ -2,8 +2,8 @@ import { Types } from "mongoose";
 
 export const EVERVAULT_ENCRYPT_URL = "https://api.evervault.com/encrypt"
 export const EVERVAULT_DECRYPT_URL = "https://api.evervault.com/decrypt"
-export const production = false
-export const DOMAIN =production?"https://xavren.vercel.app": "http://localhost:3000"
+export const production = true
+export const DOMAIN =production?"https://infinitilink.vercel.app": "http://localhost:3000"
 export const GOOGLE_REDIRECT_URI = `${DOMAIN}/api/auth/google`;
 /**
  * OTP Types

@@ -62,7 +62,7 @@ privateKey:privateKeyPem=process.env.BODYPRIVATEKEY
 }): Promise<{ decrypted: string }> {
   const decryptedBuffer = privateDecrypt(
     {
-      key: privateKeyPem,
+      key: privateKeyPem as string,
       padding: constants.RSA_PKCS1_OAEP_PADDING,
       oaepHash: "sha256", // must match encryption
     },
@@ -187,85 +187,7 @@ export function deriveKeyString(passphrase: string, salt: string): Buffer {
   return crypto.scryptSync(passphrase, saltBytes, 32);
 }
 
-export function encryptLedegersData (data){
-    let isArray = Array.isArray(data)
-  if(!isArray){
-    data = [data]
-  }
-  console.log(data)
- let dat_ =  data.map( e => {
 
-    let accNumber =e.accountNumber
-    console.log(accNumber)
-    let encryptedAccNumber =  handleEncrypt({data:accNumber,passphrase:process.env.LEDGER_SECRET,stringify:true})
-    console.log(encryptedAccNumber)
-    e.accountNumber =encryptedAccNumber
-
-    return e
-  });
- isArray ?  null : dat_ = dat_[0]
-  return dat_
-}
-export function decryptLedegersData (data){
-  console.log(data)
-  let isArray = Array.isArray(data)
-  if(!isArray){
-    data = [data]
-  }
- let dat_ =  data.map(e => {
-
-    let accNumber =e.accountNumber
-    console.log(e,"eeeeee")
-    let encryptedAccNumber = handleDecrypt({encrypted:accNumber,passphrase:process.env.LEDGER_SECRET})
-    e.accountNumber =encryptedAccNumber
-    return e
-  });
-  isArray ?  null : dat_ = dat_[0]
-  return dat_
-
-}
-export function encryptPairLedegersData (data,publicKey){
-    let isArray = Array.isArray(data)
-  if(!isArray){
-    data = [data]
-  }
- let dat_ =  data.map( e => {
-
-    let accNumber =e?.accountNumber
-    console.log(accNumber)
-    if(accNumber){
-
-      let encryptedAccNumber =  encryptMessageFromKeyPair({message:accNumber,publicKey:publicKey})
-      console.log(encryptedAccNumber)
-      e.accountNumber =encryptedAccNumber
-    }
-
-    return e
-  });
- isArray ?  null : dat_ = dat_[0]
-  return dat_
-}
-export function decryptPairLedegersData (data, privateKey){
-  console.log(data)
-  let isArray = Array.isArray(data)
-  if(!isArray){
-    data = [data]
-  }
- let dat_ =  data.map(e => {
-
-    let accNumber =e?.accountNumber
-    if(accNumber){
-
-      console.log(e,"eeeeee")
-      let encryptedAccNumber = decryptMessageFromKeyPair({encrypted:accNumber,privateKey:privateKey})
-      e.accountNumber =encryptedAccNumber
-    }
-    return e
-  });
-  isArray ?  null : dat_ = dat_[0]
-  return dat_
-
-}
 
 // let v = encryptLedegersData([{accountNumber:"123456"}
 

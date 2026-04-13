@@ -5,7 +5,7 @@ export const redisConfig =  {
 //  ,
   url: config.redisurl,
     socket: {
-    reconnectStrategy: (retries) => {
+    reconnectStrategy: (retries:number) => {
       // reconnect forever with exponential backoff
       const delay = Math.min(retries * 100, 5000);
       console.log(`Redis reconnect attempt #${retries} (next in ${delay}ms)`);
