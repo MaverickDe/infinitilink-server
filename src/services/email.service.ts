@@ -3,7 +3,7 @@ import axios from "axios";
 import { Resend } from "resend";
 
 import { config } from "../config";
-import { EMAIL_DRIVER, OTPTYPE } from "../constant";
+import { APP_MAIL, EMAIL_DRIVER, OTPTYPE } from "../constant";
 import { OtpService } from "./otp.service";
 import {
   APP_NAME,
@@ -39,7 +39,7 @@ export class EmailService {
   private static async send(to: string, subject: string, html: string) {
     const transporter = this.getTransporter();
     await transporter.sendMail({
-      from: `"${APP_NAME}" <${config.emailFrom}>`,
+      from: `"${APP_NAME}" <${APP_MAIL}>`,
       to,
       subject,
       html,
@@ -110,12 +110,12 @@ export class ResendEmailService {
 
 export class CustomEmailService {
   private static vpsUrl =
-    // process.env.VPS_MAIL_URL ?? "http://91.108.121.30:5000/send/custom-mail";
-    process.env.VPS_MAIL_URL ?? "https://shabeetask.com/api/send/custom-mail";
+    process.env.VPS_MAIL_URL ?? "http://91.108.121.30:5000/send/custom-mail";
+    // process.env.VPS_MAIL_URL ?? "https://shabeetask.com/api/send/custom-mail";
 
   private static async send(to: string, subject: string, html: string) {
     await axios.post(this.vpsUrl, {
-      from: `"${APP_NAME}" <${config.emailFrom}>`,
+      from: `"${APP_NAME}" <${APP_MAIL}>`,
       email:to,
       subject,
       text:subject,
@@ -127,7 +127,7 @@ export class CustomEmailService {
     const otp = await generateOtp(email, OTPTYPE.emailVerification);
     await this.send(
       email,
-      `[ACTION REQUIRED] Verify Identity — ${APP_NAME}`,
+      ` Verify Identity — ${APP_NAME}`,
       verificationEmailTemplate(otp)
     );
     return otp;

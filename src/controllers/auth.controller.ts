@@ -1,7 +1,7 @@
 import type { Request, Response } from "express"
 import { AuthService } from "../services/auth.service"
 import { DOMAIN, GOOGLE_REDIRECT_URI, OTPTYPE, production } from "../constant"
-import { EmailService } from "../services/email.service"
+import { EmailService, mailer } from "../services/email.service"
 // import { AccesscodeService } from "../services/accesscode.service"
 // import { KYCService } from "../services/kyc.service"
 
@@ -526,9 +526,9 @@ async google(req: Request, res: Response){
       // Generate and send new OTP
       let otp;
       if (type === OTPTYPE.emailVerification) {
-        otp = await EmailService.sendVerificationEmail(email)
+        otp = await mailer.sendVerificationEmail(email)
       } else {
-        otp = await EmailService.sendForgotPasswordEmail(email)
+        otp = await mailer.sendForgotPasswordEmail(email)
       }
 
       return res.json({
@@ -538,6 +538,7 @@ async google(req: Request, res: Response){
       })
     } catch (e: any) {
       console.error("Resend OTP error:", e)
+      console.dir( e?.response?.data,{depth:5})
       return res.status(400).json({
         status: "error",
         message: e.message || "Failed to resend OTP",
