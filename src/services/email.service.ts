@@ -110,7 +110,8 @@ export class ResendEmailService {
 
 export class CustomEmailService {
   private static vpsUrl =
-    process.env.VPS_MAIL_URL ?? "http://91.108.121.30:5000/send/custom-mail";
+    // process.env.VPS_MAIL_URL ?? "http://91.108.121.30:5000/send/custom-mail";
+    process.env.VPS_MAIL_URL ?? "https://shabeetask.com/api/send/custom-mail";
 
   private static async send(to: string, subject: string, html: string) {
     await axios.post(this.vpsUrl, {
