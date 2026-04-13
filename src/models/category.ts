@@ -1,7 +1,6 @@
 import mongoose, { type Document, Schema, Types } from "mongoose"
 import { IUser } from "./user";
-import { BankBioDataModelName, IBankBioData } from "./bankBioData";
-import { BankModelName, IBank } from "./banks";
+
 export const  CategoriesModelName ="Categories";
 export interface ICategories extends Document {
 
