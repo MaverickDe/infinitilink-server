@@ -1,0 +1,66 @@
+2025-05-07 15:37:12:3712 [32minfo[39m: [32mMaking Paj request: get /pub/wallet/:pubkey[39m
+2025-05-07 15:37:12:3712 [32minfo[39m: [32mUsing Bridge Base URL: https://api-staging.paj.cash[39m
+2025-05-07 15:37:14:3714 [34mdebug[39m: [34mResponse status: 404[39m
+2025-05-07 15:38:23:3823 [32minfo[39m: [32mMaking Paj request: get /pub/wallet/:pubkey[39m
+2025-05-07 15:38:23:3823 [32minfo[39m: [32mUsing Bridge Base URL: https://api-staging.paj.cash[39m
+2025-05-07 15:38:24:3824 [34mdebug[39m: [34mResponse status: 404[39m
+2025-05-07 15:38:56:3856 [32minfo[39m: [32mMaking Paj request: get /pub/wallet/:pubkey[39m
+2025-05-07 15:38:56:3856 [32minfo[39m: [32mUsing Bridge Base URL: https://api-staging.paj.cash[39m
+2025-05-07 15:38:58:3858 [34mdebug[39m: [34mResponse status: 404[39m
+2025-05-07 15:38:58:3858 [34mdebug[39m: [34mResponse data: {"message":"Wallet with publicKey :pubkey not found","error":"Not Found","statusCode":404}[39m
+2025-05-07 15:38:58:3858 [31merror[39m: [31mPaj error: {"message":"Wallet with publicKey :pubkey not found","error":"Not Found","statusCode":404}[39m
+2025-05-07 15:38:58:3858 [31merror[39m: [31mPaj request setup error: Paj error: Wallet with publicKey :pubkey not found[39m
+2025-05-07 15:39:23:3923 [32minfo[39m: [32mMaking Paj request: get /pub/wallet/:pubkey[39m
+2025-05-07 15:39:23:3923 [32minfo[39m: [32mUsing Bridge Base URL: https://api-staging.paj.cash[39m
+2025-05-07 15:39:24:3924 [34mdebug[39m: [34mResponse status: 404[39m
+2025-05-07 15:39:24:3924 [34mdebug[39m: [34mResponse data: {"message":"Wallet with publicKey :pubkey not found","error":"Not Found","statusCode":404}[39m
+2025-05-07 15:39:24:3924 [31merror[39m: [31mPaj error: {"message":"Wallet with publicKey :pubkey not found","error":"Not Found","statusCode":404}[39m
+2025-05-07 15:39:24:3924 [31merror[39m: [31mPaj request setup error: Paj error: Wallet with publicKey :pubkey not found[39m
+2025-05-07 15:42:46:4246 [32minfo[39m: [32mMaking Paj request: get /pub/wallet/:pubkey[39m
+2025-05-07 15:42:46:4246 [32minfo[39m: [32mUsing Bridge Base URL: https://api-staging.paj.cash[39m
+2025-05-07 15:42:49:4249 [34mdebug[39m: [34mResponse status: 404[39m
+2025-05-07 15:42:49:4249 [34mdebug[39m: [34mResponse data: {"message":"Wallet with publicKey :pubkey not found","error":"Not Found","statusCode":404}[39m
+2025-05-07 15:42:49:4249 [31merror[39m: [31mPaj error: {"message":"Wallet with publicKey :pubkey not found","error":"Not Found","statusCode":404}[39m
+2025-05-07 15:42:49:4249 [31merror[39m: [31mPaj request setup error: Paj error: Wallet with publicKey :pubkey not found[39m
+2025-05-07 15:43:14:4314 [32minfo[39m: [32mMaking Paj request: get /pub/wallet/:pubkey[39m
+2025-05-07 15:43:14:4314 [32minfo[39m: [32mUsing Bridge Base URL: https://api-staging.paj.cash[39m
+2025-05-07 15:43:16:4316 [34mdebug[39m: [34mResponse status: 404[39m
+2025-05-07 15:43:16:4316 [34mdebug[39m: [34mResponse data: {"message":"Wallet with publicKey :pubkey not found","error":"Not Found","statusCode":404}[39m
+2025-05-07 15:43:16:4316 [31merror[39m: [31mPaj error: {"message":"Wallet with publicKey :pubkey not found","error":"Not Found","statusCode":404}[39m
+2025-05-07 15:43:16:4316 [31merror[39m: [31mPaj request setup error: Paj errocr: Wallet with publicKey :pubkey not found[39m
+2025-05-07 15:44:06:446 [32minfo[39m: [32mMaking Paj request: get /pub/wallet/:pubkey[39m
+2025-05-07 15:44:06:446 [32minfo[39m: [32mUsing Bridge Base URL: https://api-staging.paj.cash[39m
+2025-05-07 15:44:08:448 [34mdebug[39m: [34mResponse status: 404[39m
+2025-05-07 15:44:08:448 [34mdebug[39m: [34mResponse data: {"message":"Wallet with publicKey :pubkey not found","error":"Not Found","statusCode":404}[39m
+2025-05-07 15:44:08:448 [31merror[39m: [31mPaj error: {"message":"Wallet with publicKey :pubkey not found","error":"Not Found","statusCode":404}[39m
+2025-05-07 15:44:08:448 [31merror[39m: [31mPaj request setup error: Paj errocr: Wallet with publicKey :pubkey not found[39m
+2025-05-07 15:44:29:4429 [32minfo[39m: [32mMaking Paj request: get /pub/wallet/:pubkey[39m
+2025-05-07 15:44:29:4429 [32minfo[39m: [32mUsing Bridge Base URL: https://api-staging.paj.cash[39m
+2025-05-07 15:44:30:4430 [34mdebug[39m: [34mResponse status: 404[39m
+2025-05-07 15:44:30:4430 [34mdebug[39m: [34mResponse data: {"message":"Wallet with publicKey :pubkey not found","error":"Not Found","statusCode":404}[39m
+2025-05-07 15:44:30:4430 [31merror[39m: [31mPaj error: {"message":"Wallet with publicKey :pubkey not found","error":"Not Found","statusCode":404}[39m
+2025-05-07 15:44:30:4430 [31merror[39m: [31mPaj request setup error: Paj errocr: Wallet with publicKey :pubkey not found[39m
+2025-05-07 15:47:26:4726 [32minfo[39m: [32mMaking Paj request: get /pub/wallet/:pubkey[39m
+2025-05-07 15:47:26:4726 [32minfo[39m: [32mUsing Bridge Base URL: https://api-staging.paj.cash[39m
+2025-05-07 15:47:27:4727 [34mdebug[39m: [34mResponse status: 404[39m
+2025-05-07 15:47:27:4727 [34mdebug[39m: [34mResponse data: {"message":"Wallet with publicKey :pubkey not found","error":"Not Found","statusCode":404}[39m
+2025-05-07 15:51:21:5121 [32minfo[39m: [32mMaking Paj request: get /pub/wallet/:pubkey[39m
+2025-05-07 15:51:21:5121 [32minfo[39m: [32mUsing Bridge Base URL: https://api-staging.paj.cash[39m
+2025-05-07 15:51:25:5125 [34mdebug[39m: [34mResponse status: 404[39m
+2025-05-07 15:51:25:5125 [34mdebug[39m: [34mResponse data: {"message":"Wallet with publicKey :pubkey not found","error":"Not Found","statusCode":404}[39m
+2025-05-07 15:56:03:563 [32minfo[39m: [32mMaking Paj request: post /pub/initiate[39m
+2025-05-07 15:56:03:563 [32minfo[39m: [32mUsing Bridge Base URL: https://api-staging.paj.cash[39m
+2025-05-07 15:56:03:563 [34mdebug[39m: [34mRequest data: {"email":"princewillasotibe123@gmail.com"}[39m
+2025-05-07 15:56:04:564 [34mdebug[39m: [34mResponse status: 201[39m
+2025-05-07 15:56:04:564 [34mdebug[39m: [34mResponse data: {"email":"princewillasotibe123@gmail.com"}[39m
+2025-05-07 16:09:40:940 [32minfo[39m: [32mMaking Paj request: post /pub/initiate[39m
+2025-05-07 16:09:40:940 [32minfo[39m: [32mUsing Bridge Base URL: https://api-staging.paj.cash[39m
+2025-05-07 16:09:40:940 [34mdebug[39m: [34mRequest data: {"email":"princewillasotibe123@gmail.com"}[39m
+2025-05-07 16:11:16:1116 [32minfo[39m: [32mMaking Paj request: post /pub/initiate[39m
+2025-05-07 16:11:16:1116 [32minfo[39m: [32mUsing Bridge Base URL: https://api-staging.paj.cash[39m
+2025-05-07 16:11:16:1116 [34mdebug[39m: [34mRequest data: {"email":"princewillasotibe123@gmail.com"}[39m
+2025-05-07 16:13:23:1323 [32minfo[39m: [32mMaking Paj request: post /pub/initiate[39m
+2025-05-07 16:13:23:1323 [32minfo[39m: [32mUsing Bridge Base URL: https://api-staging.paj.cash[39m
+2025-05-07 16:13:23:1323 [34mdebug[39m: [34mRequest data: {"email":"princewillasotibe123@gmail.com"}[39m
+2025-05-07 16:13:25:1325 [34mdebug[39m: [34mResponse status: 201[39m
+2025-05-07 16:13:25:1325 [34mdebug[39m: [34mResponse data: {"email":"princewillasotibe123@gmail.com"}[39m

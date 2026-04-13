@@ -1,0 +1,7 @@
+
+export const constData={
+    loaded:true,
+    // E_DEV_ENVIRONMENT:E_DEV_ENVIRONMENT,
+    // E_CONSENT_SCOPES:E_CONSENT_SCOPES,
+    // CONSENT_SCOPE_DETAILS:CONSENT_SCOPE_DETAILS
+}

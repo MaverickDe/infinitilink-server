@@ -1,0 +1,14 @@
+2025-05-07 15:37:14:3714 [31merror[39m: [31mPaj error: {"message":"Wallet with publicKey :pubkey not found","error":"Not Found","statusCode":404}[39m
+2025-05-07 15:38:24:3824 [31merror[39m: [31mPaj error: {"message":"Wallet with publicKey :pubkey not found","error":"Not Found","statusCode":404}[39m
+2025-05-07 15:38:58:3858 [31merror[39m: [31mPaj error: {"message":"Wallet with publicKey :pubkey not found","error":"Not Found","statusCode":404}[39m
+2025-05-07 15:38:58:3858 [31merror[39m: [31mPaj request setup error: Paj error: Wallet with publicKey :pubkey not found[39m
+2025-05-07 15:39:24:3924 [31merror[39m: [31mPaj error: {"message":"Wallet with publicKey :pubkey not found","error":"Not Found","statusCode":404}[39m
+2025-05-07 15:39:24:3924 [31merror[39m: [31mPaj request setup error: Paj error: Wallet with publicKey :pubkey not found[39m
+2025-05-07 15:42:49:4249 [31merror[39m: [31mPaj error: {"message":"Wallet with publicKey :pubkey not found","error":"Not Found","statusCode":404}[39m
+2025-05-07 15:42:49:4249 [31merror[39m: [31mPaj request setup error: Paj error: Wallet with publicKey :pubkey not found[39m
+2025-05-07 15:43:16:4316 [31merror[39m: [31mPaj error: {"message":"Wallet with publicKey :pubkey not found","error":"Not Found","statusCode":404}[39m
+2025-05-07 15:43:16:4316 [31merror[39m: [31mPaj request setup error: Paj errocr: Wallet with publicKey :pubkey not found[39m
+2025-05-07 15:44:08:448 [31merror[39m: [31mPaj error: {"message":"Wallet with publicKey :pubkey not found","error":"Not Found","statusCode":404}[39m
+2025-05-07 15:44:08:448 [31merror[39m: [31mPaj request setup error: Paj errocr: Wallet with publicKey :pubkey not found[39m
+2025-05-07 15:44:30:4430 [31merror[39m: [31mPaj error: {"message":"Wallet with publicKey :pubkey not found","error":"Not Found","statusCode":404}[39m
+2025-05-07 15:44:30:4430 [31merror[39m: [31mPaj request setup error: Paj errocr: Wallet with publicKey :pubkey not found[39m

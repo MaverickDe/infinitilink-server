@@ -1,0 +1,116 @@
+ <!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #ffffff;
+      color: #333;
+      padding: 20px;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background-color: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+      padding: 30px;
+    }
+    .header {
+      background-color: #f97316;
+      color: white;
+      text-align: center;
+      padding: 20px;
+      border-radius: 10px;
+      font-size: 22px;
+      font-weight: bold;
+    }
+    .message {
+      margin-top: 25px;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+    .footer {
+      margin-top: 40px;
+      font-size: 14px;
+      text-align: center;
+      color: #888;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">⚠️ Listing Could Not Be Approved</div>
+    <div class="message">
+      <p>Hi <strong>${userName}</strong>,</p>
+      <p>Thank you for submitting <strong>${projectName}</strong> to <strong>SolanaHunt</strong>. After review, we regret to inform you that it has not been approved at this time.</p>
+
+      ${customMessage ? `<p><strong>Admin's Feedback:</strong><br>${customMessage}</p>` : ''}
+
+      <p>You’re welcome to revise and resubmit your project in the future.</p>
+    </div>
+    <div class="footer">
+      &copy; 2025 SolanaHunt · <a href="https://solanahunt.com" style="color: #f97316;">solanahunt.com</a>
+    </div>
+  </div>
+</body>
+</html>
+
+
+ <!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #ffffff;
+      color: #333;
+      padding: 20px;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background-color: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+      padding: 30px;
+    }
+    .header {
+      background-color: #f97316;
+      color: white;
+      text-align: center;
+      padding: 20px;
+      border-radius: 10px;
+      font-size: 22px;
+      font-weight: bold;
+    }
+    .message {
+      margin-top: 25px;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+    .footer {
+      margin-top: 40px;
+      font-size: 14px;
+      text-align: center;
+      color: #888;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">🎉 Your Listing is Live on SolanaHunt!</div>
+    <div class="message">
+      <p>Hi <strong>${userName}</strong>,</p>
+      <p>Your project <strong>${projectName}</strong> has been <strong style="color: #22c55e;">approved</strong> and is now featured on <strong>SolanaHunt</strong>.</p>
+
+      ${customMessage ? `<p><strong>Admin's Note:</strong><br>${customMessage}</p>` : ''}
+
+      <p>Thank you for being part of the Solana ecosystem. We’re excited to see your project thrive!</p>
+    </div>
+    <div class="footer">
+      &copy; 2025 SolanaHunt · <a href="https://solanahunt.com" style="color: #f97316;">solanahunt.com</a>
+    </div>
+  </div>
+</body>
+</html>
