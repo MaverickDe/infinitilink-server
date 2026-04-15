@@ -91,6 +91,7 @@ app.use(helmet())
 
 const allowedOrigins = [
   // "http://dev.localhost:3000",
+  "https://infinitilink.vercel.app",
   "http://localhost:3000", // other dev URLs
   DOMAIN,
 ];
