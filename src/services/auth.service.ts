@@ -234,7 +234,7 @@ static githubcallback = async ({ code, ref }: { code: string; ref?: string }) =>
     // _id: new Types.ObjectId(newUser?._id?.toString()),
     isMain:true,
     title:"main",
-    description:"the default node of the user",
+    description:"The default node of the user",
      path:"/"
         
       }
@@ -476,7 +476,7 @@ static googlecallback = async ({ code, ref }: { code: string; ref?: string }) =>
     // _id: new Types.ObjectId(newUser?._id?.toString()),
     isMain:true,
     title:"main",
-    description:"the default node of the user",
+    description:"The default node of the user",
      path:"/"
         
       }

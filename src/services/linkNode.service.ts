@@ -131,11 +131,11 @@ if (anchor) {
     const validated = await validateInput({
       input: data,
       schema: createLinkValidator,
-      async: true
+      // async: true
     });
 
     const { node, isAnchor, anchor, group:groupId } = validated;
-
+console.log(anchor,"anchorrrrr",)
     if (isAnchor && !anchor) {
       throw manageGeneralError(
         overideObj(ERRORSMG.VALIDATION_ERROR, {
@@ -221,7 +221,7 @@ if (anchor) {
     const validated = await validateInput({
       input: data,
       schema: createLinkGroupValidator,
-      async: true
+      // async: true
     });
 
     let link = validated.link
@@ -266,7 +266,7 @@ static updateGroup = async (data: any) => {
     const validated = await validateInput({
       input: {...data.data,id:data.id},
       schema: updateLinkGroupValidator,
-      async: true
+      // async: true
     });
 
     const { id:groupId, ...rest } = validated;
@@ -626,7 +626,7 @@ let deletedNode
       const validated = await validateInput({
         input: {...data.body,linkId:data.linkId},
         schema: updateLinkValidator,
-        async: true
+        // async: true
       });
 // featured is not added to the update , only for verification
       const { linkId,anchor,node,isFeatured,group, ...rest } = validated;
@@ -734,7 +734,7 @@ static updateNode = async (data: any) => {
     const validated = await validateInput({
       input: data,
       schema: updateNodeValidator,
-      async: true
+      // async: true
     });
 
     const { node: nodeId, anchor, ...rest } = validated;

@@ -272,14 +272,28 @@ export const manageGeneralError = (error: any,overideError?: any,returnobj?:bool
 export const validateInput = ({input,schema,async}:{input:any,schema:any,async?:boolean}) => {
 
   try{
-  return async?schema.parseAsync(input): schema.parse(input)
+  return async? schema.parseAsync(input): schema.parse(input)
   }
   catch(e:any){
     // try
    
-   let errors  =  e?.issues?.map((issue:any)=>{
+   let errors  =  (e?.issues && [e?.issues[0]])?.map((issue:any)=>{
       return `${issue.path.join(".")}: ${issue.message}`})
-    throw (overideObj(ERRORSMG.VALIDATION_ERROR,{message:e?.errors? errors.join(", "):"validation error",errors:errors||[]}))
+    throw (overideObj(ERRORSMG.VALIDATION_ERROR,{message:errors||e?.errors? errors.join(", "):"validation error",errors:errors||[]}))
+  }
+  
+}
+export const validateInputAsync = async  (data:{input:any,schema:any,async?:boolean}) => {
+
+  try{
+  return  await validateInput(data)
+  }
+  catch(e:any){
+    // try
+   
+   let errors  =  (e?.issues && [e?.issues[0]])?.map((issue:any)=>{
+      return `${issue.path.join(".")}: ${issue.message}`})
+    throw (overideObj(ERRORSMG.VALIDATION_ERROR,{message:errors||e?.errors? errors.join(", "):"validation error",errors:errors||[]}))
   }
   
 }

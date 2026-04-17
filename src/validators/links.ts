@@ -8,7 +8,7 @@ const objectId = z.string().refine((val) => {
   
   return Types.ObjectId.isValid(val)
 }, {
-  message: "Invalid ObjectId"
+  message: "Invalid Id"
 });
 
 export const createNodeValidator = z.object({
