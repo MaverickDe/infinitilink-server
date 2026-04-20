@@ -106,7 +106,7 @@ export const authenticateNoSecret = async (
         .status(401)
         .json({
           message: "Authentication failed , Try logging in _",
-          status: STATUS.ERROR,
+        status: STATUS.AUTHERROR ,
         });
     }
     if (!data?.user?.emailIsVerified ) {
@@ -114,7 +114,7 @@ export const authenticateNoSecret = async (
         .status(401)
         .json({
           message: "Authentication failed , Please verify ur email",
-          status: STATUS.ERROR,
+          status: STATUS.AUTHERROR ,
         });
     }
 
