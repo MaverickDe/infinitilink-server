@@ -35,10 +35,10 @@ const GOOGLE_CLIENT_ID = production ? process.env.GOOGLE_CLIENT_ID :process.env.
 const GOOGLE_CLIENT_SECRET = production?process.env.GOOGLE_CLIENT_SECRET:process.env.TEST_GOOGLE_CLIENT_SECRET;
 // const GOOGLE_REDIRECT_URI = `${DOMAIN}/auth/google/callback`;
 const userpick = [
-  "firstname","lastname","privateKey","email","_id","createdAt","updatedAt","emailIsVerified","biodatafilled","secretPhrase","pinAdded","rootnode"
+  "firstname","lastname","onBoardGuide","privateKey","email","_id","createdAt","updatedAt","emailIsVerified","biodatafilled","secretPhrase","pinAdded","rootnode"
 ]
 const userpick2 = [
-  "firstname","lastname","privateKey","email","_id","createdAt","updatedAt","emailIsVerified","biodatafilled","pinAdded",
+  "firstname","lastname","onBoardGuide","privateKey","email","_id","createdAt","updatedAt","emailIsVerified","biodatafilled","pinAdded",
 ]
 const biodataSchema = yup.object({
   firstname: yup.string().required("firstame is required").min(3, "Name must be at least 3 characters"),

@@ -27,6 +27,7 @@ export interface IUser extends Document {
   resetPasswordToken?: string
   resetPasswordExpires?: Date
   emailIsVerified: boolean
+  onBoardGuide: boolean
   biodatafilled: boolean
   admin: boolean
     accessCode?: string
@@ -76,6 +77,7 @@ export const userSchema = new Schema<IUser>(
 
     googleId: { type: String },
     emailIsVerified: { type: Boolean, default: false },
+    onBoardGuide: { type: Boolean, default: false },
     biodatafilled: { type: Boolean, default: false },
  
     resetPasswordToken: { type: String },
