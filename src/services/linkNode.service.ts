@@ -16,7 +16,7 @@ import { createLinkValidator ,
   updateLinkGroupValidator
 } from "../validators/links";
 import { LinkGroupModel } from "../models/linkGroup";
-import { IUser } from "../models/user";
+import { IUser, User } from "../models/user";
 import { group } from "console";
 
 
@@ -368,8 +368,9 @@ static getNode = async ({ node:nodeId ,user }: any) => {
     const node = await NodesModel.findOne(nd).populate(this.populateuser);
     let userObjectId = new Types.ObjectId((node?.user?._id)?.toString());
     nodeObjectId =(node?.anchor as Types.ObjectId)||nodeObjectId
-console.log(node,nd,"nodend")
+// console.log(node,nd,"nodend")
       const nodes = await NodesModel.find({node:nodeObjectId});
+      // const nodes = await NodesModel.find({user:userObjectId});
 
     // ✅ sort groups by creation date (oldest → newest or reverse if you prefer)
     const groups = await LinkGroupModel.find({
@@ -436,7 +437,7 @@ Object.keys(grouped).forEach((key) => {
     manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);
   }
 };
-static getNodes = async ({user,page=1 }: any) => {
+static getNodes = async ({user,page=1 ,isPb }: any) => {
   try {
   
     let nd:any ={
@@ -467,6 +468,22 @@ const skip = (page - 1) * limit;
         }
    
     ;
+
+  } catch (e) {
+    manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);
+  }
+};
+static getPbNodes = async ({user,...rest}: any) => {
+  try {
+      const user_ = await User.findById(user)
+      if(!user){
+      throw manageGeneralError(
+        overideObj(ERRORSMG.INVALID_CREDENTIALS, {
+          message: "Invalid resources"
+        })
+      );
+      }
+   return this.getNodes({user:user_,...rest})
 
   } catch (e) {
     manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);
@@ -554,7 +571,7 @@ const skip = (page - 1) * limit;
 //     }
 //   };
 
-static deleteNode = async ({ node:nodeId, user }: any) => {
+static deleteNode_ = async ({ node:nodeId, user }: any) => {
   const session = await mongoose.startSession();
 
   try {
@@ -611,6 +628,96 @@ let deletedNode
 
     return deletedNode;
 
+  } catch (e) {
+    manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);
+  } finally {
+    session.endSession();
+  }
+};
+
+static deleteNode = async ({ node: nodeId, user }: any) => {
+  const session = await mongoose.startSession();
+
+  try {
+    let deletedNode: any;
+
+    await session.withTransaction(async () => {
+      const userId:any = new Types.ObjectId(user._id?.toString());
+      const _nodeId:any = new Types.ObjectId(nodeId);
+
+      // 🛡️ Root node is tied to user lifecycle — cannot be deleted
+      if (user?.rootnode && _nodeId.equals(new Types.ObjectId(user.rootnode.toString()))) {
+        throw manageGeneralError(
+          overideObj(ERRORSMG.VALIDATION_ERROR, {
+            message: "Root node cannot be deleted",
+          })
+        );
+      }
+
+      // Fetch deleted node AND root node path in parallel
+      const [foundNode, rootNode] = await Promise.all([
+        NodesModel.findOneAndDelete(
+          { _id: _nodeId, user: userId }, // ✅ $ne guard no longer needed
+          { session }
+        ),
+        user?.rootnode
+          ? NodesModel.findOne(
+              { _id: new Types.ObjectId(user.rootnode.toString()) },
+              { path: 1 },
+              { session }
+            ).lean()
+          : null,
+      ]);
+
+      if (!foundNode)   throw manageGeneralError(
+          overideObj(ERRORSMG.VALIDATION_ERROR, {
+            message: "Node not found ",
+          })
+        );
+      deletedNode = foundNode;
+
+      const oldPathPrefix = deletedNode.path;
+      const newParentId = rootNode?._id ?? null;
+      const newParentPath = rootNode?.path ?? "";
+
+      await Promise.all([
+        LinksModel.deleteMany({ node: _nodeId, user: userId }, { session }),
+        LinkGroupModel.deleteMany({ node: _nodeId, user: userId }, { session }),
+        NodesModel.bulkWrite(
+          [
+            {
+              updateMany: {
+                filter: {
+                  user: userId,
+                  path: { $regex: `^${escapeRegex(oldPathPrefix)}` },
+                },
+                update: [
+                  {
+                    $set: {
+                      path: {
+                        $concat: [
+                          newParentPath,
+                          { $substr: ["$path", oldPathPrefix.length, -1] },
+                        ],
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+            {
+              updateMany: {
+                filter: { node: _nodeId, user: userId },
+                update: { $set: { node: newParentId } },
+              },
+            },
+          ],
+          { session }
+        ),
+      ]);
+    });
+
+    return deletedNode;
   } catch (e) {
     manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);
   } finally {

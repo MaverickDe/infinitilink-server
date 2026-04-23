@@ -27,6 +27,7 @@ export class LinkNoderoute{
     this.router.get("/node", this.linkNodeController.getNode.bind(this.linkNodeController))
     this.router.get("/node/ab", this.linkNodeController.getAbNode.bind(this.linkNodeController))
     this.router.get("/nodes", this.linkNodeController.getNodes.bind(this.linkNodeController))
+    this.router.get("/nodes/pb", this.linkNodeController.getPbNodes.bind(this.linkNodeController))
     this.router.get("/link", this.linkNodeController.getLink.bind(this.linkNodeController))
     this.router.get("/link/click", this.linkNodeController.recordClick.bind(this.linkNodeController))
     this.router.get("/links", this.linkNodeController.getPbLinks.bind(this.linkNodeController))

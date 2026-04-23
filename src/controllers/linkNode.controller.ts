@@ -71,7 +71,26 @@ node:node||id
       
       const data = await LinkNodeService.getNodes( {
 
-user:req.user
+user:req.user 
+      });
+
+      res.json({success:true,data});
+    } catch (e) {
+      return manageReturnedError({
+        error: e,
+        overideError: ERRORSMG.SOMETHING_WENT_WRONG_ERROR,
+        res
+      });
+    }
+  }
+   @ExcludeDecorator(authenticate)
+  async getPbNodes(req: Request, res: Response) {
+    console.log(req.query)
+    try {
+      
+      const data = await LinkNodeService.getPbNodes( {
+
+user:req.query.userId 
       });
 
       res.json({success:true,data});
@@ -138,6 +157,7 @@ page:Number(page)
       });
     }
   }
+   @ExcludeDecorator(authenticate)
   async recordClick(req: Request, res: Response) {
     try {
       const { id } = req.query;
