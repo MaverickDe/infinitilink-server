@@ -10,6 +10,30 @@ const { authenticate } = DECORATORS;
 @UseGlobalMiddleware(authenticate)
 export class LinkNodeController {
 
+  async  uploadNodeLogo(req: Request, res: Response) {
+ try {
+
+  const nodeId = req.query.id as string;
+
+    // console.log(req.file,"fillll",nodeId)
+    //   const { name, description } = req.body;
+      const node = await LinkNodeService.uploadNodeLogo( {
+        nodeId,
+        user: req.user,
+   file:req.file
+      });
+
+      res.json({success:true,data:node});
+    } catch (e) {
+      console.log(e,"controler err")
+      return manageReturnedError({
+        error: e,
+        overideError: ERRORSMG.SOMETHING_WENT_WRONG_ERROR,
+        res
+      });
+    }
+}
+
   // ================= NODE =================
 
   async createNode(req: Request, res: Response) {
@@ -246,6 +270,25 @@ id:id as string
     });
 
       res.json({success:true,data:node_});
+    } catch (e) {
+      return manageReturnedError({
+        error: e,
+        overideError: ERRORSMG.SOMETHING_WENT_WRONG_ERROR,
+        res
+      });
+    }
+  }
+  async changeProfileVisibility(req: Request, res: Response) {
+    try {
+      
+    
+
+      const data = await LinkNodeService.changeProfileVisibility({
+  ...req.body,
+        user: req.user,
+    });
+
+      res.json({success:true,data});
     } catch (e) {
       return manageReturnedError({
         error: e,

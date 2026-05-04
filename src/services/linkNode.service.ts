@@ -3,6 +3,7 @@ import mongoose, { Types } from "mongoose";
 import { validateInput, manageGeneralError, overideObj, sortByPosition, buildPath } from "../utils/utils";
 
 import { ERRORSMG } from "../error/error";
+import { E_STORAGE_FOLDER } from "../storage";
 import { ILinks, LinksModel } from "../models/links";
 import { NodesModel } from "../models/node";
 import { createLinkValidator ,
@@ -18,6 +19,7 @@ import { createLinkValidator ,
 import { LinkGroupModel } from "../models/linkGroup";
 import { IUser, User } from "../models/user";
 import { group } from "console";
+import { v2 as cloudinary } from 'cloudinary';
 
 
 export class LinkNodeService {
@@ -120,7 +122,59 @@ if (anchor) {
     }
   };
 
+static async uploadNodeLogo({file,user,nodeId}:{file:any,user:IUser,nodeId:string}) {
+  // const { nodeId } = req.body; // or req.params
+try{
 
+  if (!file) {
+           throw manageGeneralError(
+        overideObj(ERRORSMG.INVALID_CREDENTIALS, {
+          message: "Invalid file"
+        }))
+    // return res.status(400).json({ message: 'No file uploaded' });
+  }
+
+   const nodeExist = await NodesModel.exists(
+      {
+        _id: new Types.ObjectId(nodeId),
+        user: new Types.ObjectId(user?._id?.toString())
+      })
+
+        if (!nodeExist) {
+           throw manageGeneralError(
+        overideObj(ERRORSMG.INVALID_CREDENTIALS, {
+          message: "Your not authorise to perform this action"
+        }))
+    // return res.status(400).json({ message: 'No file uploaded' });
+  }
+
+  const result = await cloudinary.uploader.upload(file.path, {
+    folder: E_STORAGE_FOLDER.squarelnode,
+    public_id: `node_${nodeId}`,   // 👈 unique per node
+    overwrite: true,               // 👈 replace existing image
+    resource_type: 'image',
+  });
+
+
+      const node = await NodesModel.findOneAndUpdate(
+      {
+        _id: new Types.ObjectId(nodeId),
+        user: new Types.ObjectId(user?._id?.toString())
+      },
+      { $set: {logo:result.secure_url} },
+      { new: true }
+    );
+
+  return {
+    node,
+    logo: result.secure_url,
+    public_id: result.public_id,
+  };
+}catch(e){
+  console.log("upload error ", e)
+    manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);
+}
+}
   // =========================
   // CREATE LINK
   // =========================
@@ -346,7 +400,7 @@ static deleteGroup = async ({ user, id }: any) => {
     {
       path: "user",
       model: "User", 
-      select: "firstname lastname  avatar bio ",
+      select: "firstname lastname  avatar bio rootnode isVisibleInNode",
     
   } ]
 static getNode = async ({ node:nodeId ,user }: any) => {
@@ -366,6 +420,15 @@ static getNode = async ({ node:nodeId ,user }: any) => {
     }
     
     const node = await NodesModel.findOne(nd).populate(this.populateuser);
+    if(!node){
+          throw manageGeneralError(
+        overideObj(ERRORSMG.INVALID_CREDENTIALS, {
+          message: "Invalid node"
+        })
+      );
+    }
+    // const user_ = await User.findOne({node.}).;
+    const mainNode = await NodesModel.findOne({_id:(node.user as IUser).rootnode});
     let userObjectId = new Types.ObjectId((node?.user?._id)?.toString());
     nodeObjectId =(node?.anchor as Types.ObjectId)||nodeObjectId
 // console.log(node,nd,"nodend")
@@ -424,6 +487,7 @@ Object.keys(grouped).forEach((key) => {
 });
     return {
         node,
+        mainNode:mainNode,
         nodes,
         groups:sortByPosition<any>(groups),
         links: grouped,
@@ -1349,6 +1413,20 @@ static recordClick = async ({id:linkId}:{id: string}) => {
 
 
     return link
+  } catch (e) {
+    manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);
+  }
+};
+static changeProfileVisibility = async ({user,visibility}:{user: IUser,visibility:boolean}) => {
+  try {
+    // Incrementing both clicks and views for discovery metrics
+      let user_ = await User.findByIdAndUpdate(
+        // new Types.ObjectId(link?.node),
+         user._id,
+        {isVisibleInNode:visibility},
+        { new: true }
+      );
+    return {success:true}
   } catch (e) {
     manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);
   }

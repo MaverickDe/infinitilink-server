@@ -2,6 +2,7 @@
 import express from "express"
 
 import { LinkNodeController } from "../controllers/linkNode.controller"
+import { upload } from "../storage"
 // import { NotificationController } from "../controllers/notification.controller"
 // import { Notcontroller } from "server/controllers/not.controller"
 
@@ -23,6 +24,8 @@ export class LinkNoderoute{
     this.router.patch("/link/reorder", this.linkNodeController.linksReorder.bind(this.linkNodeController))
     this.router.post("/node", this.linkNodeController.createNode.bind(this.linkNodeController))
     this.router.get("/node/change-node-parent-node", this.linkNodeController.changeNodeParentNode.bind(this.linkNodeController))
+    this.router.post("/node/change-profile-visibility", this.linkNodeController.changeProfileVisibility.bind(this.linkNodeController))
+    this.router.post("/node/logo", upload.single('image'),this.linkNodeController.uploadNodeLogo.bind(this.linkNodeController))
     this.router.put("/node", this.linkNodeController.updateNode.bind(this.linkNodeController))
     this.router.get("/node", this.linkNodeController.getNode.bind(this.linkNodeController))
     this.router.get("/node/ab", this.linkNodeController.getAbNode.bind(this.linkNodeController))

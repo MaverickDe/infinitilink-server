@@ -30,6 +30,7 @@ export interface IUser extends Document {
   onBoardGuide: boolean
   biodatafilled: boolean
   admin: boolean
+  isVisibleInNode: boolean
     accessCode?: string
       salt?:string
       avatar?:string
@@ -58,6 +59,7 @@ export const userSchema = new Schema<IUser>(
     type: { type: String, default: "email" },
     lastname: { type: String, default: "" },
     admin: { type: Boolean, default: false },
+    isVisibleInNode: { type: Boolean, default: true },
     password: { type: String },
     country: { type: String },
     accountType: { type: String },

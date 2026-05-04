@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { Types } from "mongoose";
-import { E_LINK_CATEGORIES } from "../models/links";
+import { E_LINK_CATEGORIES, E_LINK_DOMAIN_TYPE } from "../models/links";
 import { convertEnumToList } from "../utils/utils";
 
 const objectId = z.string().refine((val) => {
@@ -59,6 +59,7 @@ isFeatured: z.boolean().optional().nullable(),
 
     description: z.string().optional().default(""),
     category: z.enum(convertEnumToList(E_LINK_CATEGORIES)).optional(),
+    linkDomainType: z.enum(convertEnumToList(E_LINK_DOMAIN_TYPE)).optional().default(E_LINK_DOMAIN_TYPE.other),
     tags: z.array(z.string().trim().toLowerCase()).optional().default([]),
 
     node: objectId,

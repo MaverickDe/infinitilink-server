@@ -12,6 +12,14 @@ export enum E_LINK_CATEGORIES{
     MUSIC="MUSIC",
     OTHER="OTHER"
 }
+export enum E_LINK_DOMAIN_TYPE{
+  twitter = "twitter",
+  instagram = "instagram",
+  linkedin = "linkedin",
+  whatsapp = "whatsapp",
+  youtube = "youtube",
+  other = "other",
+}
 export interface ILinks extends Document {
   user: Types.ObjectId | IUser; // Can be ID or populated object
   url: String;
@@ -21,6 +29,7 @@ export interface ILinks extends Document {
   isPrivate: boolean;
   isFeatured: boolean;
   category: String; // Can be ID or populated object
+  linkDomainType: String; // Can be ID or populated object
   node: Types.ObjectId | INodes; // Can be ID or populated object
   anchor: Types.ObjectId | ILinks; // Can be ID or populated object
   group?: Types.ObjectId | ILinkGroup; // Can be ID or populated object
@@ -71,6 +80,15 @@ export let LinksGenericObj =  {
         type:String,
         enum:convertEnumToList(E_LINK_CATEGORIES),
         default:E_LINK_CATEGORIES.OTHER
+
+    //   required: true 
+
+ 
+    },   
+    linkDomainType: { 
+        type:String,
+        enum:convertEnumToList(E_LINK_DOMAIN_TYPE),
+        default:E_LINK_DOMAIN_TYPE.other
 
     //   required: true 
 
