@@ -5,7 +5,7 @@ import { validateInput, manageGeneralError, overideObj, sortByPosition, buildPat
 import { ERRORSMG } from "../error/error";
 import { E_STORAGE_FOLDER } from "../storage";
 import { ILinks, LinksModel } from "../models/links";
-import { NodesModel } from "../models/node";
+import { NodesModel, NodesModelName } from "../models/node";
 import { createLinkValidator ,
 
 
@@ -403,6 +403,21 @@ static deleteGroup = async ({ user, id }: any) => {
       select: "firstname lastname  avatar bio rootnode isVisibleInNode",
     
   } ]
+  static populatenode =[
+     
+LinkNodeService.populateuser ,
+     
+    {
+      path: "anchor",
+      model: NodesModelName, 
+      // select: "all",
+      populate:[
+      LinkNodeService.populateuser 
+      ]
+    
+  } ,
+
+]
 static getNode = async ({ node:nodeId ,user }: any) => {
   try {
     let nodeObjectId:Types.ObjectId = new Types.ObjectId(nodeId);
@@ -431,6 +446,11 @@ static getNode = async ({ node:nodeId ,user }: any) => {
     const mainNode = await NodesModel.findOne({_id:(node.user as IUser).rootnode});
     let userObjectId = new Types.ObjectId((node?.user?._id)?.toString());
     nodeObjectId =(node?.anchor as Types.ObjectId)||nodeObjectId
+    let  anchorNode = null
+    if(node?.anchor){
+       anchorNode = await NodesModel.findOne({_id:node?.anchor}).populate(this.populateuser);;
+
+    }
 // console.log(node,nd,"nodend")
       const nodes = await NodesModel.find({node:nodeObjectId});
       // const nodes = await NodesModel.find({user:userObjectId});
@@ -438,12 +458,12 @@ static getNode = async ({ node:nodeId ,user }: any) => {
     // ✅ sort groups by creation date (oldest → newest or reverse if you prefer)
     const groups = await LinkGroupModel.find({
       node: nodeObjectId,
-      user: userObjectId
+      // user: userObjectId
     }).sort({ createdAt: 1 }); // or -1 for newest first
 
     const links = await LinksModel.find({
       node: nodeObjectId,
-      user: userObjectId,
+      // user: userObjectId,
       $or:[
 
         
@@ -454,7 +474,7 @@ static getNode = async ({ node:nodeId ,user }: any) => {
       
     }).populate("anchor");
     const featuredLinks = await LinksModel.find({
-     user: userObjectId,
+     user: anchorNode?.user||userObjectId,
       isFeatured: true,
       
     });
@@ -492,7 +512,9 @@ Object.keys(grouped).forEach((key) => {
         groups:sortByPosition<any>(groups),
         links: grouped,
         unStructuredGroupLink:links,
-        featuredLinks
+        featuredLinks,
+        anchorNode
+        // anchorData:{}
       }
    
     ;
@@ -501,6 +523,7 @@ Object.keys(grouped).forEach((key) => {
     manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);
   }
 };
+
 static getNodes = async ({user,page=1 ,isPb }: any) => {
   try {
   
