@@ -61,7 +61,7 @@ const nodePromise = node
 
 
 const anchorPromise = anchor
-  ? LinksModel.exists({ _id: anchor })
+  ? NodesModel.exists({ _id: anchor })
   : Promise.resolve(null);
 
 const [nodeOk, anchorOk] = await Promise.all([
