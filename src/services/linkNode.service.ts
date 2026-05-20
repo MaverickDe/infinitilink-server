@@ -420,12 +420,19 @@ LinkNodeService.populateuser ,
 ]
 static getNode = async ({ node:nodeId ,user }: any) => {
   try {
-    let nodeObjectId:Types.ObjectId = new Types.ObjectId(nodeId);
-    
-    let nd:any ={
-      _id: nodeObjectId,
-      // user: userObjectId
-    }
+let nd: any;
+let nodeObjectId =null
+if (Types.ObjectId.isValid(nodeId)) {
+   nodeObjectId = new Types.ObjectId(nodeId);
+
+  nd = {
+    _id: nodeObjectId,
+  };
+} else {
+  nd = {
+    username: nodeId,
+  };
+}
 
     
 
@@ -445,7 +452,7 @@ static getNode = async ({ node:nodeId ,user }: any) => {
     // const user_ = await User.findOne({node.}).;
     const mainNode = await NodesModel.findOne({_id:(node.user as IUser).rootnode});
     let userObjectId = new Types.ObjectId((node?.user?._id)?.toString());
-    nodeObjectId =(node?.anchor as Types.ObjectId)||nodeObjectId
+    nodeObjectId =(node?.anchor as Types.ObjectId)||node?._id
     let  anchorNode = null
     if(node?.anchor){
        anchorNode = await NodesModel.findOne({_id:node?.anchor}).populate(this.populateuser);;

@@ -12,6 +12,7 @@ export interface INodes extends Document {
   anchor: Types.ObjectId | INodes;
   node?: Types.ObjectId | INodes;
   description: String;
+  username?: String;
   links: Number;
   clicks: Number;
   views: Number;
@@ -54,6 +55,12 @@ export let NodesGenericObj =  {
    
  
     },   
+username: {
+  type: String,
+  required: false,
+  unique: true,
+  sparse: true,
+},
      
 
    isHidden: { 

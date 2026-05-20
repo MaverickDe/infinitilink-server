@@ -35,6 +35,12 @@ export const updateNodeValidator = z.object({
     nodesIsVisible: z.boolean().optional(),
     isVisible: z.boolean().optional(),
     description: z.string().min(1).trim().optional(),
+  username: z
+  .string()
+  .min(1).max(30,"Username cannot be more than 30")
+  .trim()
+  .regex(/^\S+$/, "Username cannot contain spaces")
+  .optional(),
   // user: objectId,
   isFeatured: z.boolean().optional().nullable(),
    node: objectId,
