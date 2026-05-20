@@ -146,6 +146,7 @@ node
       });
     }
   }
+   @ExcludeDecorator(authenticate)
   async getLink(req: Request, res: Response) {
     try {
       const { id } = req.query;
