@@ -23,6 +23,8 @@ export interface INodes extends Document {
   isHidden: boolean;
   isPrivate: boolean;
   nodesIsVisible: boolean;
+  userIsVisibleInNode: boolean;
+   userIsVisibleInNodeTimeStamp:Date
   isVisible: boolean;
   isMain: boolean;
 path: string;
@@ -114,6 +116,12 @@ username: {
       required: false, 
       default: true 
     }, 
+       userIsVisibleInNode: { 
+      type: Boolean, 
+      required: false, 
+      default: true 
+    }, 
+      userIsVisibleInNodeTimeStamp: { type: Date,  },
        isVisible: { 
       type: Boolean, 
       required: false, 

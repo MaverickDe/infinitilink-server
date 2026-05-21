@@ -181,7 +181,7 @@ try{
  
   static createLink = async (user:IUser,data: any) => {
   try {
-    console.log(data)
+
     const validated = await validateInput({
       input: data,
       schema: createLinkValidator,
@@ -189,7 +189,7 @@ try{
     });
 
     const { node, isAnchor, anchor, group:groupId } = validated;
-console.log(anchor,"anchorrrrr",)
+
     if (isAnchor && !anchor) {
       throw manageGeneralError(
         overideObj(ERRORSMG.VALIDATION_ERROR, {
@@ -400,7 +400,7 @@ static deleteGroup = async ({ user, id }: any) => {
     {
       path: "user",
       model: "User", 
-      select: "firstname lastname  avatar bio rootnode isVisibleInNode",
+      select: "firstname lastname  avatar bio rootnode isVisibleInNode isVisibleInNodeTimeStamp",
     
   } ]
   static populatenode =[
@@ -1447,15 +1447,36 @@ static recordClick = async ({id:linkId}:{id: string}) => {
     manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);
   }
 };
-static changeProfileVisibility = async ({user,visibility}:{user: IUser,visibility:boolean}) => {
+static changeProfileVisibility = async ({user,visibility,node}:{user: IUser,visibility:boolean,node?:string}) => {
   try {
     // Incrementing both clicks and views for discovery metrics
+    // let global_ = !!Number(global)
+
+    if(!node){
+
       let user_ = await User.findByIdAndUpdate(
         // new Types.ObjectId(link?.node),
          user._id,
-        {isVisibleInNode:visibility},
+        {isVisibleInNode:visibility,
+
+           isVisibleInNodeTimeStamp: new Date()
+        },
         { new: true }
       );
+    }else{
+      let node_ = await NodesModel.findOneAndUpdate(
+        // new Types.ObjectId(link?.node),
+   {user:  new Types.ObjectId(user._id?.toString()),
+         _id:new Types.ObjectId(node)},
+        {userIsVisibleInNode:visibility,
+
+  userIsVisibleInNodeTimeStamp: new Date()
+
+        },
+        { new: true }
+      );
+
+    }
     return {success:true}
   } catch (e) {
     manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);

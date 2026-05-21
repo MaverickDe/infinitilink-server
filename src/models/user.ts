@@ -31,6 +31,7 @@ export interface IUser extends Document {
   biodatafilled: boolean
   admin: boolean
   isVisibleInNode: boolean
+  isVisibleInNodeTimeStamp: Date
     accessCode?: string
       salt?:string
       avatar?:string
@@ -60,6 +61,7 @@ export const userSchema = new Schema<IUser>(
     lastname: { type: String, default: "" },
     admin: { type: Boolean, default: false },
     isVisibleInNode: { type: Boolean, default: true },
+    isVisibleInNodeTimeStamp: { type: Date,  },
     password: { type: String },
     country: { type: String },
     accountType: { type: String },
