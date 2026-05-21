@@ -1203,6 +1203,119 @@ static searchLinks = async ({ data }: { data: any }) => {
     manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);
   }
 };
+static searchNode = async ({ data, node: nodeId }: { data: any; node: string }) => {
+  try {
+    const {
+      query,
+      category,
+      sort,
+      page = 1,
+      limit = 30,
+    } = await validateInput({
+      input: data,
+      schema: searchLinkValidator,
+      async: true,
+    });
+
+    // const userId = new Types.ObjectId(user._id?.toString());
+    const _nodeId = new Types.ObjectId(nodeId);
+
+    // 1️⃣ Verify node exists and belongs to user
+    const targetNode = await NodesModel.findOne(
+      { _id: _nodeId, 
+        // user: userId 
+      },
+      { path: 1, title: 1, description: 1 }
+    ).lean();
+
+    if (!targetNode) {
+      throw manageGeneralError(
+        overideObj(ERRORSMG.NOT_FOUND_ERROR, {
+          message: "Node not found or unauthorized",
+        })
+      );
+    }
+
+    const skip = (page - 1) * limit;
+
+    // 2️⃣ Build link filter — scoped to node + all descendants via path prefix
+    //    First get all node IDs whose path starts with targetNode.path
+ const descendantNodes = await NodesModel.find(
+  {
+    // user: userId,
+    path: { $regex: `^${escapeRegex(targetNode.path)}` },
+  },
+  { _id: 1, title: 1, description: 1, logo: 1 } // project only what you need
+)
+  .lean()
+  .then((nodes) => nodes);
+const nodeMap = new Map(descendantNodes.map((n) => [n._id.toString(), n]));
+
+// Don't forget the target node itself
+nodeMap.set(targetNode._id.toString(), targetNode);
+    // Always include the target node itself
+    // const nodeScope = [_nodeId, ...descendantNodeIds];
+    const nodeScope = [_nodeId, ...descendantNodes.map((n) => n._id)];
+
+    const filter: any = {
+      // user: userId,
+      node: { $in: nodeScope },
+      isFeatured:false,
+    };
+
+    if (query) {
+      filter.$text = { $search: query };
+    }
+
+    if (category) {
+      filter.category = category;
+    }
+
+    // 3️⃣ Build sort
+    let sortOption: any = {};
+
+    if (query) {
+      sortOption.score = { $meta: "textScore" };
+    }
+
+    if (sort === "latest") sortOption.createdAt = -1;
+    if (sort === "oldest") sortOption.createdAt = 1;
+    if (!sort && !query) sortOption.createdAt = -1;
+
+    // 4️⃣ Search links scoped to the node tree
+    const results = await LinksModel.find(filter)
+      .skip(skip)
+      .limit(limit + 1)
+      .sort(sortOption)
+      .lean();
+
+    // 5️⃣ Check if node title/description matches query too
+    let nodeMatch = null;
+    if (query) {
+      const q = query.toLowerCase();
+      const titleHit = targetNode.title?.toLowerCase().includes(q);
+      const descHit = targetNode.description?.toLowerCase().includes(q);
+      if (titleHit || descHit) {
+        nodeMatch = { _id: targetNode._id, title: targetNode.title, description: targetNode.description };
+      }
+    }
+    const data_ = results.slice(0, limit).map((link) => ({
+  ...link,
+  node: nodeMap.get(link.node?.toString()) ?? null,
+}));
+
+    return {
+      nodeMatch,        // non-null if the node itself matched the query
+      data: data_.slice(0, limit),
+
+      nextPage: page + 1,
+      page,
+      hasMore: results.length > limit,
+    };
+  } catch (e) {
+    manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);
+  }
+};
 
 
   // =========================

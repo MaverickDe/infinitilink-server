@@ -3,6 +3,7 @@
 // import { sandboxDB } from "./db.connection";
 
 import { LinksModel } from "./links";
+import { NodesModel } from "./node";
 
 // DenormalizedLedgerGroupModel.collection.createIndex({ "SGId": 1 }, { background: true });
 
@@ -34,6 +35,11 @@ LinksModel.collection.createIndex(
     }
   }
 );
+// new — covers { user, node: { $in: [...] }, createdAt } from searchNode
+LinksModel.collection.createIndex({ user: 1, node: 1, createdAt: -1 }, { background: true });
+
+// new — covers the descendant path lookup on NodesModel
+NodesModel.collection.createIndex({ user: 1, path: 1 }, { background: true });
 export const runIndex= ()=>{
 
 }

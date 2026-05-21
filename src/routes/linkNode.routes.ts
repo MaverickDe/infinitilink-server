@@ -21,6 +21,7 @@ export class LinkNoderoute{
     this.router.put("/link", this.linkNodeController.updateLink.bind(this.linkNodeController))
     this.router.delete("/link", this.linkNodeController.deleteLink.bind(this.linkNodeController))
     this.router.get("/link/search", this.linkNodeController.searchLinks.bind(this.linkNodeController))
+    this.router.get("/node/s-search", this.linkNodeController.searchNode.bind(this.linkNodeController))
     this.router.patch("/link/reorder", this.linkNodeController.linksReorder.bind(this.linkNodeController))
     this.router.post("/node", this.linkNodeController.createNode.bind(this.linkNodeController))
     this.router.get("/node/change-node-parent-node", this.linkNodeController.changeNodeParentNode.bind(this.linkNodeController))

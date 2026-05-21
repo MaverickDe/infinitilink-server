@@ -522,4 +522,24 @@ const {id} = req.query
       });
     }
   }
+ @ExcludeDecorator(authenticate)
+  async searchNode(req: Request, res: Response) {
+    try {
+      const { id } = req.query as any;
+
+      const results = await LinkNodeService.searchNode({
+        // user: req.user._id.toString(),
+        node:id,
+       data:req.query,
+      });
+
+      res.json({success:true,data:results});
+    } catch (e) {
+      return manageReturnedError({
+        error: e,
+        overideError: ERRORSMG.SOMETHING_WENT_WRONG_ERROR,
+        res
+      });
+    }
+  }
 }
