@@ -18,6 +18,8 @@ export class LinkNoderoute{
 
   initializeRoutes() {
     this.router.post("/link", this.linkNodeController.createLink.bind(this.linkNodeController))
+    this.router.post("/link/add-to-jumbutron", this.linkNodeController.AddResourceToJumbutron.bind(this.linkNodeController))
+    this.router.delete("/link/remove-from-jumbutron", this.linkNodeController.RemoveResourceFromJumbutron.bind(this.linkNodeController))
     this.router.put("/link", this.linkNodeController.updateLink.bind(this.linkNodeController))
     this.router.delete("/link", this.linkNodeController.deleteLink.bind(this.linkNodeController))
     this.router.get("/link/search", this.linkNodeController.searchLinks.bind(this.linkNodeController))

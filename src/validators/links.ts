@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { Types } from "mongoose";
-import { E_LINK_CATEGORIES, E_LINK_DOMAIN_TYPE } from "../models/links";
+import { E_LINK_CATEGORIES, E_LINK_DOMAIN_TYPE, E_RESOURCE_TYPES } from "../models/links";
 import { convertEnumToList } from "../utils/utils";
 
 const objectId = z.string().refine((val) => {
@@ -59,6 +59,9 @@ export const createLinkValidator = z
     title: z.string().min(1, "Title is required").trim(),
 
     url: z.string().url("Invalid URL").optional().nullable(), // 👈 make optional
+    // text: z.string("Invalid Text").optional().nullable(), // 👈 make optional
+    text: z.string({ message: "Invalid Text" }).optional().nullable(),
+    resourceType: z.enum(convertEnumToList(E_RESOURCE_TYPES)).optional().default(E_RESOURCE_TYPES.URL),
 isFeatured: z.boolean().optional().nullable(),
     isAnchor: z.boolean().optional().default(false),
     anchor: objectId.optional(),
@@ -86,18 +89,42 @@ isFeatured: z.boolean().optional().nullable(),
     // ✅ Case 2: Normal link
     if (!data.isAnchor) {
       
-      if (!data.url) {
+      if (!data.url  && !data.text) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "URL is required when not an anchor",
+          message: "URL or Text is required when not an anchor",
           path: ["url"],
         });
       }
+    
 
+        if(data.resourceType===E_RESOURCE_TYPES.TEXT && (!data.text || data.text.trim()==="")){
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Text content is required when resourceType is TEXT",  
+            
+
+
+      })}
+
+      if(data.resourceType===E_RESOURCE_TYPES.URL && (!data.url || data.url.trim()==="")){
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "URL is required when resourceType is URL",  })}
+    
+    
+    
  
-    }
+    }     
+
 
          if (data.isFeatured) {
+          // data cannot be text resource if it is featured
+          if(data.resourceType===E_RESOURCE_TYPES.TEXT){
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: "a text resource can not be featured", })
+          }
           if (data.isAnchor) {
 
 
@@ -117,6 +144,7 @@ isFeatured: z.boolean().optional().nullable(),
             });
           }
       }
+
   });
 export const LinkValidator = z.object({
   title: z.string().min(1, "Title is required").trim(),
@@ -125,7 +153,8 @@ export const LinkValidator = z.object({
   category: z.enum(convertEnumToList( E_LINK_CATEGORIES)).optional(),
   tags: z.array(z.string().trim().toLowerCase()).optional().default([]),
 
-
+   text: z.string({ message: "Invalid Text" }).optional().nullable(),
+    resourceType: z.enum(convertEnumToList(E_RESOURCE_TYPES)).optional().default(E_RESOURCE_TYPES.URL),
 
   isAnchor: z.boolean().optional().default(false),
   anchor: objectId.optional()
@@ -144,13 +173,27 @@ export const LinkValidator = z.object({
 
     // ✅ Case 2: Normal link
     if (!data.isAnchor) {
-      if (!data.url) {
+     if (!data.url  && !data.text) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "URL is required when not an anchor",
+          message: "URL or Text is required when not an anchor",
           path: ["url"],
         });
       }
+
+        if(data.resourceType===E_RESOURCE_TYPES.TEXT && (!data.text || data.text.trim()==="")){
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Text content is required when resourceType is TEXT",  
+            
+
+
+      })}
+
+      if(data.resourceType===E_RESOURCE_TYPES.URL && (!data.url || data.url.trim()==="")){
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "URL is required when resourceType is URL",  })}
     }
   });
 
@@ -163,6 +206,8 @@ export const updateLinkValidator = z.object({
   description: z.string().optional(),
   tags: z.array(z.string().trim().toLowerCase()).optional(),
   category: z.enum(convertEnumToList( E_LINK_CATEGORIES)).optional(),
+     text: z.string({ message: "Invalid Text" }).optional().nullable(),
+    resourceType: z.enum(convertEnumToList(E_RESOURCE_TYPES)).optional().default(E_RESOURCE_TYPES.URL),
 
   isAnchor: z.boolean().optional().nullable(),
   isFeatured: z.boolean().optional().nullable(),
@@ -183,16 +228,38 @@ export const updateLinkValidator = z.object({
 
     // ✅ Case 2: Normal link
     if (!data.isAnchor) {
-      if (!data.url) {
+      if (!data.url  && !data.text) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "URL is required when not an anchor",
+          message: "URL or Text is required when not an anchor",
           path: ["url"],
         });
       }
+
+          
+
+        if(data.resourceType===E_RESOURCE_TYPES.TEXT && (!data.text || data.text.trim()==="")){
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Text content is required when resourceType is TEXT",  
+            
+
+
+      })}
+
+      if(data.resourceType===E_RESOURCE_TYPES.URL && (!data.url || data.url.trim()==="")){
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "URL is required when resourceType is URL",  })}
+            
     }
 
           if (data.isFeatured) {
+                  if(data.resourceType===E_RESOURCE_TYPES.TEXT){
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: "a text resource can not be featured", })
+          }
           if (data.isAnchor) {
 
 
@@ -212,6 +279,7 @@ export const updateLinkValidator = z.object({
             });
           }
       }
+ 
 
     
   });

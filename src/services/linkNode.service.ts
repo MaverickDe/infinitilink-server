@@ -4,7 +4,7 @@ import { validateInput, manageGeneralError, overideObj, sortByPosition, buildPat
 
 import { ERRORSMG } from "../error/error";
 import { E_STORAGE_FOLDER } from "../storage";
-import { ILinks, LinksModel } from "../models/links";
+import { E_RESOURCE_TYPES, ILinks, LinksModel } from "../models/links";
 import { NodesModel, NodesModelName } from "../models/node";
 import { createLinkValidator ,
 
@@ -20,6 +20,8 @@ import { LinkGroupModel } from "../models/linkGroup";
 import { IUser, User } from "../models/user";
 import { group } from "console";
 import { v2 as cloudinary } from 'cloudinary';
+import { ResourceJumbutronModel } from "../models/resouceJumbutron";
+import { populate } from "dotenv";
 
 
 export class LinkNodeService {
@@ -210,7 +212,7 @@ const groupPromise = groupId
   : Promise.resolve(null);
 
 const anchorPromise = anchor
-  ? LinksModel.exists({ _id: anchor })
+  ? LinksModel.exists({ _id: anchor,resourceType:data.resourceType })
   : Promise.resolve(null);
 
 const [nodeOk, groupOk, anchorOk] = await Promise.all([
@@ -266,6 +268,94 @@ if (anchor) {
   }
 };
 
+static AddResourceToJumbutron = async (user:IUser,data: {
+     isRedirect?:boolean
+    isPopup?:boolean
+    node:string
+    resource:string
+}) => {
+  try { 
+    // resouce exist
+
+    let resourceExist = await LinksModel.exists({ _id: new Types.ObjectId(data.resource) })
+    if(!resourceExist){ 
+        throw manageGeneralError( 
+      overideObj(ERRORSMG.VALIDATION_ERROR, {
+        message: "Invalid resource"
+      })
+    );
+     }
+
+      // node exist
+    let nodeExist = await NodesModel.exists({ _id: new Types.ObjectId(data.node) })
+    if(!nodeExist){
+        throw manageGeneralError(
+      overideObj(ERRORSMG.VALIDATION_ERROR, {
+        message: "Invalid node"
+      })
+    );
+    }
+
+    const jumbutron = await ResourceJumbutronModel.findOneAndUpdate({
+
+       node: new Types.ObjectId(data.node),
+    resource: new Types.ObjectId(data.resource)
+    },{
+    isRedirect: data.isRedirect || false,
+  
+    isPopup: data.isPopup || false,
+    // node: new Types.ObjectId(data.node),
+    // resource: new Types.ObjectId(data.resource)
+  
+  
+  },{new:true,upsert:true})
+
+  // update link.jumbutron
+  let link_ = await LinksModel.findOneAndUpdate(  {
+    _id: new Types.ObjectId(data.resource),
+    user: new Types.ObjectId(user?._id?.toString())
+  },{
+    $set:{
+      jumbotron: jumbutron._id
+    }
+  })
+  if(link_){
+
+    link_.jumbotron =jumbutron
+  }
+
+  return link_;
+
+  }catch (e) {
+
+
+      manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);
+  }
+  
+}
+
+
+static RemoveResourceFromJumbutron = async (user:IUser,data: {  id:string}) => {
+  try {//id is resource if
+
+  // delete jumbtroon, set link.jumbutron to null
+    const jumbutron = await ResourceJumbutronModel.findOneAndDelete({
+      resource: new Types.ObjectId(data.id)
+    })
+    let resource = await LinksModel.findOneAndUpdate(  {
+      _id: new Types.ObjectId(data.id),
+      user: new Types.ObjectId(user?._id?.toString())
+    },{
+      $set:{
+        jumbotron: null
+      }
+    },{new:true})
+    return resource;
+  }  catch (e) {
+      manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);
+  }
+}
+
   static createGroup = async (data: any) => {
   try {
     let user = data?.user
@@ -292,18 +382,31 @@ if (anchor) {
       })
     );
   }
+  if(link?.anchor){
+    let anchorExist = await LinksModel.exists({ _id: new Types.ObjectId(link?.anchor),resourceType:link.resourceType })
+    if(!anchorExist){ 
+      
+      throw manageGeneralError(
+        overideObj(ERRORSMG.VALIDATION_ERROR, {
+          message: "Invalid anchor",
+        })
+      )
+      }
+      
+    }
     const group = await LinkGroupModel.create({
       ...validated,
       user: new Types.ObjectId(user?._id?.toString()),
       node: new Types.ObjectId(validated.node)
     });
-
+ 
         const link_ = await LinksModel.create({
       ...link,
       user: new Types.ObjectId(user?._id?.toString()),
       node: new Types.ObjectId(validated.node),
       group: group?._id,
-      anchor: link?.anchor ? new Types.ObjectId(link?.anchor) : null
+      anchor: link?.anchor ? new Types.ObjectId(link?.anchor) : null,
+      isFeatured:false
     });
 
     return  {group,link:link_} ;
@@ -479,7 +582,7 @@ if (Types.ObjectId.isValid(nodeId)) {
       ]
 
       
-    }).populate("anchor");
+    }).populate("anchor jumbotron");
     const featuredLinks = await LinksModel.find({
      user: anchorNode?.user||userObjectId,
       isFeatured: true,
@@ -866,7 +969,7 @@ const groupPromise = groupid
   : Promise.resolve(null);
 
 const anchorPromise = anchor
-  ? LinksModel.exists({ _id: anchor })
+  ? LinksModel.exists({ _id: anchor ,resourceType:data.resourceType})
   : Promise.resolve(null);
 
 const [
@@ -1347,7 +1450,7 @@ nodeMap.set(targetNode._id.toString(), targetNode);
 
       const link = await LinksModel.findOne({
         _id: new Types.ObjectId(id)
-      })
+      }).populate("anchor")
       
 
       return link
@@ -1493,7 +1596,7 @@ static getLinks = async ({ query, page = 1, user }: { query?: string; page: numb
     }
 
     // 2. Build Filter for General Feed
-    const filter: any = { isPrivate: false, isHidden: false };
+    const filter: any = { isPrivate: false, isHidden: false ,isFeatured:false,resourceType:E_RESOURCE_TYPES.URL};
     if (query) {
       filter.$or = [
         { title: { $regex: query, $options: "i" } },

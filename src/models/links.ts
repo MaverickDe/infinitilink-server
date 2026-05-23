@@ -5,12 +5,19 @@ import { IUser } from "./user";
 import { INodes, NodesModelName } from "./node";
 import { convertEnumToList } from "../utils/utils";
 import { ILinkGroup, LinkGroupModelName } from "./linkGroup";
+
+import { ResourceJumbutronName } from "./general";
+import { IResourceJumbutron } from "./resouceJumbutron";
 export const  LinksModelName ="Links";
 
 
 export enum E_LINK_CATEGORIES{
     MUSIC="MUSIC",
     OTHER="OTHER"
+}
+export enum E_RESOURCE_TYPES{
+    URL="URL",
+    TEXT="TEXT"
 }
 export enum E_LINK_DOMAIN_TYPE{
   twitter = "twitter",
@@ -29,10 +36,12 @@ export interface ILinks extends Document {
   isPrivate: boolean;
   isFeatured: boolean;
   category: String; // Can be ID or populated object
+  resourceType: String; // Can be ID or populated object
   linkDomainType: String; // Can be ID or populated object
   node: Types.ObjectId | INodes; // Can be ID or populated object
   anchor: Types.ObjectId | ILinks; // Can be ID or populated object
   group?: Types.ObjectId | ILinkGroup; // Can be ID or populated object
+  jumbotron?: Types.ObjectId|IResourceJumbutron ; // Can be ID or populated object
    Links: Number;
   clicks: Number;
   views: Number;
@@ -64,6 +73,13 @@ export let LinksGenericObj =  {
    
       
     },   
+    jumbotron: { 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: ResourceJumbutronName, 
+  
+   
+      
+    },   
     title: { 
         type: String, 
         // required: true, 
@@ -75,7 +91,22 @@ export let LinksGenericObj =  {
    
  
     },   
+    text: { 
+      type: String, 
+   
+ 
+    },   
      
+
+    resourceType: { 
+        type:String,
+        enum:convertEnumToList(E_RESOURCE_TYPES ),
+        default:E_RESOURCE_TYPES.URL
+
+    //   required: true 
+
+ 
+    },   
     category: { 
         type:String,
         enum:convertEnumToList(E_LINK_CATEGORIES),

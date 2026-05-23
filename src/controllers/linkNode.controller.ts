@@ -438,6 +438,42 @@ const {id} = req.query
       });
     }
   }
+  async AddResourceToJumbutron(req: Request, res: Response) {
+    try {
+    //   const { nodeId, title, url, description, tags, group } = req.body;
+
+      const data = await LinkNodeService.AddResourceToJumbutron( req.user, {
+     
+     ...req.body
+      });
+
+      res.json({success:true,data});
+    } catch (e) {
+      return manageReturnedError({
+        error: e,
+        overideError: ERRORSMG.SOMETHING_WENT_WRONG_ERROR,
+        res
+      });
+    }
+  }
+  async RemoveResourceFromJumbutron(req: Request, res: Response) {
+    try {
+    //   const { nodeId, title, url, description, tags, group } = req.body;
+
+      const data = await LinkNodeService.RemoveResourceFromJumbutron( req.user, {
+     
+     ...(req.query??{}) as any
+      });
+
+      res.json({success:true,data});
+    } catch (e) {
+      return manageReturnedError({
+        error: e,
+        overideError: ERRORSMG.SOMETHING_WENT_WRONG_ERROR,
+        res
+      });
+    }
+  }
 
   async updateLink(req: Request, res: Response) {
     try {
