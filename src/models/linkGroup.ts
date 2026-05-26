@@ -11,12 +11,14 @@ export interface ILinkGroup extends Document {
 
 
   node?: Types.ObjectId | INodes;
+  action?: Types.ObjectId;
   description: String;
   isHidden: Boolean;
   isPrivate: Boolean;
   isVisibleInNode: Boolean;
  
  position?: Number;
+ actions?: Number;
 
 
 }
@@ -59,10 +61,20 @@ export let LinkGroupGenericObj =  {
       ref: "User", 
       required: true 
     },
+    action: { 
+      type: mongoose.Schema.Types.ObjectId, 
+    
+    },
        position: { 
       type: Number, 
       required: false, 
        default: Date.now
+     
+    },  
+       actions: { 
+      type: Number, 
+      required: false, 
+       default: 0
      
     },  
         

@@ -14,6 +14,7 @@ export class AuthRoutes {
 
   private initializeRoutes() {
     this.router.post("/login", this.authController.login.bind(this.authController))
+    this.router.post("/login-test", this.authController.loginTestUser.bind(this.authController))
     // this.router.get("/github", this.authController.github.bind(this.authController))
     this.router.get("/google", this.authController.google.bind(this.authController))
     this.router.get("/google/callback", this.authController.googlecallback.bind(this.authController))

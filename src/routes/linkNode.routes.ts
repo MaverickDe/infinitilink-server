@@ -31,6 +31,7 @@ export class LinkNoderoute{
     this.router.post("/node/logo", upload.single('image'),this.linkNodeController.uploadNodeLogo.bind(this.linkNodeController))
     this.router.put("/node", this.linkNodeController.updateNode.bind(this.linkNodeController))
     this.router.get("/node", this.linkNodeController.getNode.bind(this.linkNodeController))
+    this.router.get("/node/featuredlinks", this.linkNodeController.getNodeFeaturedLink.bind(this.linkNodeController))
     this.router.get("/node/ab", this.linkNodeController.getAbNode.bind(this.linkNodeController))
     this.router.get("/nodes", this.linkNodeController.getNodes.bind(this.linkNodeController))
     this.router.get("/nodes/pb", this.linkNodeController.getPbNodes.bind(this.linkNodeController))

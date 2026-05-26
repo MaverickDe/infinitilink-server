@@ -30,11 +30,13 @@ export enum E_LINK_DOMAIN_TYPE{
 export interface ILinks extends Document {
   user: Types.ObjectId | IUser; // Can be ID or populated object
   url: String;
+  text: String;
   title: String;
     logo?: String;
   isHidden: boolean;
   isPrivate: boolean;
   isFeatured: boolean;
+  featuredLinkIsNodeLevel: boolean;
   category: String; // Can be ID or populated object
   resourceType: String; // Can be ID or populated object
   linkDomainType: String; // Can be ID or populated object
@@ -42,10 +44,12 @@ export interface ILinks extends Document {
   anchor: Types.ObjectId | ILinks; // Can be ID or populated object
   group?: Types.ObjectId | ILinkGroup; // Can be ID or populated object
   jumbotron?: Types.ObjectId|IResourceJumbutron ; // Can be ID or populated object
+  action?: Types.ObjectId
    Links: Number;
   clicks: Number;
   views: Number;
   position?: Number;
+  actions?: Number;
   comments: Number;
   likes: Number;
   description: String;
@@ -136,6 +140,11 @@ export let LinksGenericObj =  {
       required: false, 
       default: false 
     },   
+    featuredLinkIsNodeLevel: { 
+      type: Boolean, 
+      required: false, 
+      default: true 
+    },   
     isPrivate: { 
       type: Boolean, 
       required: false, 
@@ -150,6 +159,11 @@ export let LinksGenericObj =  {
       type: mongoose.Schema.Types.ObjectId, 
       ref: "User", 
       required: true 
+    },
+    action: { 
+      type: mongoose.Schema.Types.ObjectId, 
+    
+      // required: true 
     },
     node: { 
       type: mongoose.Schema.Types.ObjectId, 
@@ -185,6 +199,12 @@ export let LinksGenericObj =  {
       type: Number, 
       required: false, 
        default: Date.now
+     
+    },  
+           actions: { 
+      type: Number, 
+      required: false, 
+       default: 0
      
     },  
       comments: { 

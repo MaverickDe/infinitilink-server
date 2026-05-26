@@ -1,6 +1,6 @@
 
 import mongoose, { Types } from "mongoose";
-import { validateInput, manageGeneralError, overideObj, sortByPosition, buildPath } from "../utils/utils";
+import { validateInput, manageGeneralError, overideObj, sortByPosition, buildPath, escapeRegex, wouldCreateCycle } from "../utils/utils";
 
 import { ERRORSMG } from "../error/error";
 import { E_STORAGE_FOLDER } from "../storage";
@@ -521,7 +521,216 @@ LinkNodeService.populateuser ,
   } ,
 
 ]
-static getNode = async ({ node:nodeId ,user }: any) => {
+
+static getGroupLinks = async ({ groupId ,user}: any,config?:any) => { 
+  try {
+    const groupObjectId = new Types.ObjectId(groupId);
+    const userObjectId = new Types.ObjectId(user._id.toString());
+    console.log(groupObjectId,userObjectId)
+    const links = await LinksModel.find({
+      group: groupObjectId,
+      user: userObjectId
+    }).populate("anchor jumbotron");
+    if(config.actionNoGuide){
+
+      return links;
+    }
+
+return links.map((e) => {
+  if (e.action) {
+    const { url, text, ...rest } = e.toObject();
+    return rest;
+  }
+
+  return e;
+});
+  } catch (e) {
+    manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR); 
+  }
+
+}
+static getNodeLinks2 = async ({ nodeId ,user}: any,config?:any) => { 
+  try {
+    const nodeObjectId = new Types.ObjectId(nodeId);
+    const userObjectId = new Types.ObjectId(user._id.toString());
+    const links = await LinksModel.find({
+      node: nodeObjectId,
+      user: userObjectId
+    }).populate("anchor jumbotron");
+    return links;
+  } catch (e) {
+    manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR); 
+  }
+
+}
+static   getNode = async ({ node:nodeId ,user}: any,config?:any) => {
+  try {
+let nd: any;
+let nodeObjectId =null
+if (Types.ObjectId.isValid(nodeId)) {
+   nodeObjectId = new Types.ObjectId(nodeId);
+
+  nd = {
+    _id: nodeObjectId,
+  };
+} else {
+  nd = {
+    username: nodeId,
+  };
+}
+
+    
+
+    if(user){
+      nd.user=new Types.ObjectId((user._id)?.toString());
+
+    }
+    
+    const node = config?.node||await NodesModel.findOne(nd).populate(this.populateuser);
+    if(!node){
+          throw manageGeneralError(
+        overideObj(ERRORSMG.INVALID_CREDENTIALS, {
+          message: "Invalid node"
+        })
+      );
+    }
+    // const user_ = await User.findOne({node.}).;
+    const mainNode = await NodesModel.findOne({_id:(node.user as IUser).rootnode});
+    let userObjectId = new Types.ObjectId((node?.user?._id)?.toString());
+    nodeObjectId =(node?.anchor as Types.ObjectId)||node?._id
+    let  anchorNode = null
+    if(node?.anchor){
+       anchorNode = await NodesModel.findOne({_id:node?.anchor}).populate(this.populateuser);;
+
+    }
+    if((node?.action||anchorNode?.action) && !config?.actionNoGuide){
+
+      return {
+      node,
+      anchorNode}
+    }
+
+// console.log(node,nd,"nodend")
+      const nodes = await NodesModel.find({node:nodeObjectId});
+      // const nodes = await NodesModel.find({user:userObjectId});
+
+    // ✅ sort groups by creation date (oldest → newest or reverse if you prefer)
+    const groups = await LinkGroupModel.find({
+      node: nodeObjectId,
+      // user: userObjectId
+    }).sort({ createdAt: 1 }); // or -1 for newest first
+
+    const links_ = await LinksModel.find({
+      node: nodeObjectId,
+      // user: userObjectId,
+      $or:[
+
+        
+      {  isFeatured: false,},
+       { isFeatured: { $exists: false } }
+      ]
+
+      
+    }).populate("anchor jumbotron");
+
+let links = links_
+    if(!config?.actionNoGuideLink){
+
+      links = links_.map(e=>{
+        let groupAction = groups.find(ee=>ee?._id?.toString() ==e?.group ?.toString())?.action
+
+        if(e?.action || groupAction){
+          let {url,text,...rest} =e.toObject()
+
+          return rest as any
+
+        }
+        return e
+      })
+
+    }
+
+// const featuredLinkIsNodeLevel = node?.featuredLinkIsNodeLevel;
+
+// const featuredLinks = await LinksModel.find({
+//   user: anchorNode?.user || userObjectId,
+//   isFeatured: true,
+
+
+// });
+
+
+
+
+const featuredLinks = await LinksModel.find({
+  user: anchorNode?.user || userObjectId,
+  isFeatured: true,
+
+  $or: [
+    // node-level featured links
+    {
+      featuredLinkIsNodeLevel: true,
+      node: nodeObjectId,
+    },
+
+    // global featured links
+    {
+      featuredLinkIsNodeLevel: false,
+    },
+
+    // old docs where field doesn't exist
+    {
+      featuredLinkIsNodeLevel: { $exists: false },
+    },
+  ],
+});
+
+    // ✅ unified grouped structure
+    const grouped: Record<string, any[]> = {
+      ungroup: []
+    };
+
+    // initialize group keys
+    groups.forEach((g) => {
+      grouped[(g._id as any)?.toString()] = [];
+    });
+
+    // distribute links
+    links.forEach((link) => {
+      if (!link.group) {
+        grouped["ungroup"].push(link);
+      } else {
+        const gid = link.group.toString();
+        if (!grouped[gid]) {
+          // fallback in case group is missing
+          grouped[gid] = [];
+        }
+        grouped[gid].push(link);
+      }
+    });
+Object.keys(grouped).forEach((key) => {
+  grouped[key] = sortByPosition(grouped[key]);
+});
+    return {
+        node,
+        anchorNode,
+
+        mainNode:mainNode,
+        nodes,
+        groups:sortByPosition<any>(groups),
+        links: grouped,
+        unStructuredGroupLink:links,
+        featuredLinks,
+        // anchorData:{}
+      }
+   
+    ;
+
+  } catch (e) {
+    manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);
+  }
+};
+static getNodeFeaturedLink = async ({ node:nodeId ,user }: any) => {
   try {
 let nd: any;
 let nodeObjectId =null
@@ -553,7 +762,7 @@ if (Types.ObjectId.isValid(nodeId)) {
       );
     }
     // const user_ = await User.findOne({node.}).;
-    const mainNode = await NodesModel.findOne({_id:(node.user as IUser).rootnode});
+    // const mainNode = await NodesModel.findOne({_id:(node.user as IUser).rootnode});
     let userObjectId = new Types.ObjectId((node?.user?._id)?.toString());
     nodeObjectId =(node?.anchor as Types.ObjectId)||node?._id
     let  anchorNode = null
@@ -561,73 +770,35 @@ if (Types.ObjectId.isValid(nodeId)) {
        anchorNode = await NodesModel.findOne({_id:node?.anchor}).populate(this.populateuser);;
 
     }
-// console.log(node,nd,"nodend")
-      const nodes = await NodesModel.find({node:nodeObjectId});
-      // const nodes = await NodesModel.find({user:userObjectId});
 
-    // ✅ sort groups by creation date (oldest → newest or reverse if you prefer)
-    const groups = await LinkGroupModel.find({
-      node: nodeObjectId,
-      // user: userObjectId
-    }).sort({ createdAt: 1 }); // or -1 for newest first
 
-    const links = await LinksModel.find({
-      node: nodeObjectId,
-      // user: userObjectId,
-      $or:[
 
-        
-      {  isFeatured: false,},
-       { isFeatured: { $exists: false } }
-      ]
 
-      
-    }).populate("anchor jumbotron");
-    const featuredLinks = await LinksModel.find({
-     user: anchorNode?.user||userObjectId,
-      isFeatured: true,
-      
-    });
+const featuredLinkIsNodeLevel = node?.featuredLinkIsNodeLevel;
 
-    // ✅ unified grouped structure
-    const grouped: Record<string, any[]> = {
-      ungroup: []
-    };
+const featuredLinks = await LinksModel.find({
+  user: anchorNode?.user || userObjectId,
+  isFeatured: true,
 
-    // initialize group keys
-    groups.forEach((g) => {
-      grouped[(g._id as any)?.toString()] = [];
-    });
-
-    // distribute links
-    links.forEach((link) => {
-      if (!link.group) {
-        grouped["ungroup"].push(link);
-      } else {
-        const gid = link.group.toString();
-        if (!grouped[gid]) {
-          // fallback in case group is missing
-          grouped[gid] = [];
-        }
-        grouped[gid].push(link);
+  ...(featuredLinkIsNodeLevel
+    ? {
+        featuredLinkIsNodeLevel: true,
+        node: nodeObjectId,
       }
-    });
-Object.keys(grouped).forEach((key) => {
-  grouped[key] = sortByPosition(grouped[key]);
+    : {
+        $or: [
+          { featuredLinkIsNodeLevel: false },
+          { featuredLinkIsNodeLevel: { $exists: false } },
+        ],
+      }),
 });
-    return {
-        node,
-        mainNode:mainNode,
-        nodes,
-        groups:sortByPosition<any>(groups),
-        links: grouped,
-        unStructuredGroupLink:links,
-        featuredLinks,
-        anchorNode
-        // anchorData:{}
-      }
+
+
+    return  featuredLinks;
    
-    ;
+
+   
+    
 
   } catch (e) {
     manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);
@@ -1306,6 +1477,7 @@ static searchLinks = async ({ data }: { data: any }) => {
     manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);
   }
 };
+
 static searchNode = async ({ data, node: nodeId }: { data: any; node: string }) => {
   try {
     const {
@@ -1320,15 +1492,11 @@ static searchNode = async ({ data, node: nodeId }: { data: any; node: string }) 
       async: true,
     });
 
-    // const userId = new Types.ObjectId(user._id?.toString());
     const _nodeId = new Types.ObjectId(nodeId);
 
-    // 1️⃣ Verify node exists and belongs to user
     const targetNode = await NodesModel.findOne(
-      { _id: _nodeId, 
-        // user: userId 
-      },
-      { path: 1, title: 1, description: 1 }
+      { _id: _nodeId },
+      { path: 1, title: 1, description: 1, action: 1 }
     ).lean();
 
     if (!targetNode) {
@@ -1341,76 +1509,115 @@ static searchNode = async ({ data, node: nodeId }: { data: any; node: string }) 
 
     const skip = (page - 1) * limit;
 
-    // 2️⃣ Build link filter — scoped to node + all descendants via path prefix
-    //    First get all node IDs whose path starts with targetNode.path
- const descendantNodes = await NodesModel.find(
-  {
-    // user: userId,
-    path: { $regex: `^${escapeRegex(targetNode.path)}` },
-  },
-  { _id: 1, title: 1, description: 1, logo: 1 } // project only what you need
-)
-  .lean()
-  .then((nodes) => nodes);
-const nodeMap = new Map(descendantNodes.map((n) => [n._id.toString(), n]));
+    const descendantNodes = await NodesModel.find(
+      { path: { $regex: `^${escapeRegex(targetNode.path)}` } },
+      { _id: 1, title: 1, description: 1, logo: 1, action: 1 }
+    ).lean();
 
-// Don't forget the target node itself
-nodeMap.set(targetNode._id.toString(), targetNode);
-    // Always include the target node itself
-    // const nodeScope = [_nodeId, ...descendantNodeIds];
+    const nodeMap = new Map(descendantNodes.map((n) => [n._id.toString(), n]));
+    nodeMap.set(targetNode._id.toString(), targetNode);
+
     const nodeScope = [_nodeId, ...descendantNodes.map((n) => n._id)];
 
-    const filter: any = {
-      // user: userId,
+    // 1️⃣ Build $match stage
+    const matchStage: any = {
       node: { $in: nodeScope },
-      isFeatured:false,
+      isFeatured: false,
     };
+    if (query) matchStage.$text = { $search: query };
+    if (category) matchStage.category = category;
 
-    if (query) {
-      filter.$text = { $search: query };
-    }
+    // 2️⃣ Build $sort stage
+    const sortStage: any = {};
+    if (query) sortStage.score = { $meta: "textScore" };
+    if (sort === "latest") sortStage.createdAt = -1;
+    else if (sort === "oldest") sortStage.createdAt = 1;
+    else if (!sort && !query) sortStage.createdAt = -1;
 
-    if (category) {
-      filter.category = category;
-    }
+    // 3️⃣ Aggregation pipeline
+    const pipeline: any[] = [
+      { $match: matchStage },
+      ...(Object.keys(sortStage).length ? [{ $sort: sortStage }] : []),
+      { $skip: skip },
+      { $limit: limit + 1 },
 
-    // 3️⃣ Build sort
-    let sortOption: any = {};
+      // Lookup group and filter out if group.action exists
+      {
+        $lookup: {
+          from: "groups", // ✅ your actual collection name
+          localField: "group",
+          foreignField: "_id",
+          as: "_groupData",
+        },
+      },
 
-    if (query) {
-      sortOption.score = { $meta: "textScore" };
-    }
+      // Filter: exclude if group.action is set
+      {
+        $match: {
+          $or: [
+            { "_groupData.0": { $exists: false } },      // no group at all
+            { "_groupData.0.action": { $exists: false } }, // group exists but no action
+            { "_groupData.0.action": null },               // group.action is explicitly null
+          ],
+        },
+      },
 
-    if (sort === "latest") sortOption.createdAt = -1;
-    if (sort === "oldest") sortOption.createdAt = 1;
-    if (!sort && !query) sortOption.createdAt = -1;
+      // Attach resolved node from nodeMap via $addFields after — done in JS below
+      // But first, filter out links whose node has an action
+      {
+        $match: {
+          node: {
+            $in: nodeScope.filter((id) => {
+              const n = nodeMap.get(id.toString());
+              return !n?.action; // ✅ only keep nodes without action
+            }),
+          },
+        },
+      },
 
-    // 4️⃣ Search links scoped to the node tree
-    const results = await LinksModel.find(filter)
-      .skip(skip)
-      .limit(limit + 1)
-      .sort(sortOption)
-      .lean();
+      // Shape the group field to match expected object (drop internal array)
+      {
+        $addFields: {
+          group: { $arrayElemAt: ["$_groupData", 0] },
+        },
+      },
+      {
+        $unset: "_groupData",
+      },
+    ];
 
-    // 5️⃣ Check if node title/description matches query too
+    const results = await LinksModel.aggregate(pipeline);
+
+    // 4️⃣ Attach full node object (from nodeMap) to each link
+    const data_ = results.slice(0, limit).map((link) => ({
+      ...link,
+      node: nodeMap.get(link.node?.toString()) ?? null,
+    }));
+
+    // 5️⃣ Node title/description match check
     let nodeMatch = null;
     if (query) {
       const q = query.toLowerCase();
       const titleHit = targetNode.title?.toLowerCase().includes(q);
       const descHit = targetNode.description?.toLowerCase().includes(q);
       if (titleHit || descHit) {
-        nodeMatch = { _id: targetNode._id, title: targetNode.title, description: targetNode.description };
+        nodeMatch = {
+          _id: targetNode._id,
+          title: targetNode.title,
+          description: targetNode.description,
+        };
       }
     }
-    const data_ = results.slice(0, limit).map((link) => ({
-  ...link,
-  node: nodeMap.get(link.node?.toString()) ?? null,
-}));
 
     return {
-      nodeMatch,        // non-null if the node itself matched the query
-      data: data_.slice(0, limit),
-
+      nodeMatch,
+      data: data_.map(e=>{
+        if(e?.action){
+          let {url,text,...rest} = e
+          return rest
+        }
+        return e
+      }),
       nextPage: page + 1,
       page,
       hasMore: results.length > limit,
@@ -1419,6 +1626,121 @@ nodeMap.set(targetNode._id.toString(), targetNode);
     manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);
   }
 };
+// static searchNode = async ({ data, node: nodeId }: { data: any; node: string }) => {
+//   try {
+//     const {
+//       query,
+//       category,
+//       sort,
+//       page = 1,
+//       limit = 30,
+//     } = await validateInput({
+//       input: data,
+//       schema: searchLinkValidator,
+//       async: true,
+//     });
+
+//     // const userId = new Types.ObjectId(user._id?.toString());
+//     const _nodeId = new Types.ObjectId(nodeId);
+
+//     // 1️⃣ Verify node exists and belongs to user
+//     const targetNode = await NodesModel.findOne(
+//       { _id: _nodeId, 
+//         // user: userId 
+//       },
+//       { path: 1, title: 1, description: 1 }
+//     ).lean();
+
+//     if (!targetNode) {
+//       throw manageGeneralError(
+//         overideObj(ERRORSMG.NOT_FOUND_ERROR, {
+//           message: "Node not found or unauthorized",
+//         })
+//       );
+//     }
+
+//     const skip = (page - 1) * limit;
+
+//     // 2️⃣ Build link filter — scoped to node + all descendants via path prefix
+//     //    First get all node IDs whose path starts with targetNode.path
+//  const descendantNodes = await NodesModel.find(
+//   {
+//     // user: userId,
+//     path: { $regex: `^${escapeRegex(targetNode.path)}` },
+//   },
+//   { _id: 1, title: 1, description: 1, logo: 1 } // project only what you need
+// )
+//   .lean()
+//   .then((nodes) => nodes);
+// const nodeMap = new Map(descendantNodes.map((n) => [n._id.toString(), n]));
+
+// // Don't forget the target node itself
+// nodeMap.set(targetNode._id.toString(), targetNode);
+//     // Always include the target node itself
+//     // const nodeScope = [_nodeId, ...descendantNodeIds];
+//     const nodeScope = [_nodeId, ...descendantNodes.map((n) => n._id)];
+
+//     const filter: any = {
+//       // user: userId,
+//       node: { $in: nodeScope },
+//       isFeatured:false,
+//     };
+
+//     if (query) {
+//       filter.$text = { $search: query };
+//     }
+
+//     if (category) {
+//       filter.category = category;
+//     }
+
+//     // 3️⃣ Build sort
+//     let sortOption: any = {};
+
+//     if (query) {
+//       sortOption.score = { $meta: "textScore" };
+//     }
+
+//     if (sort === "latest") sortOption.createdAt = -1;
+//     if (sort === "oldest") sortOption.createdAt = 1;
+//     if (!sort && !query) sortOption.createdAt = -1;
+
+ 
+
+//     // 4️⃣ Search links scoped to the node tree
+//     const results = await LinksModel.find(filter)
+//       .skip(skip)
+//       .limit(limit + 1)
+//       .sort(sortOption)
+//       .lean();
+
+//     // 5️⃣ Check if node title/description matches query too
+//     let nodeMatch = null;
+//     if (query) {
+//       const q = query.toLowerCase();
+//       const titleHit = targetNode.title?.toLowerCase().includes(q);
+//       const descHit = targetNode.description?.toLowerCase().includes(q);
+//       if (titleHit || descHit) {
+//         nodeMatch = { _id: targetNode._id, title: targetNode.title, description: targetNode.description };
+//       }
+//     }
+//     const data_ = results.slice(0, limit).map((link) => ({
+//   ...link,
+//   node: nodeMap.get(link.node?.toString()) ?? null,
+// }));
+
+//     return {
+//       nodeMatch,        // non-null if the node itself matched the query
+//       data: data_.slice(0, limit),
+
+//       nextPage: page + 1,
+//       page,
+//       hasMore: results.length > limit,
+//     };
+//   } catch (e) {
+//     manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);
+//   }
+// };
 
 
   // =========================
@@ -1444,16 +1766,24 @@ nodeMap.set(targetNode._id.toString(), targetNode);
       manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);
     }
   };
-  static getLink = async ({ id }: any) => {
+  static getLink = async ({ id }: any,config?:any) => {
     try {
     
 
       const link = await LinksModel.findOne({
-        _id: new Types.ObjectId(id)
+        _id: new Types.ObjectId(id),
+        // isFeatured:false
       }).populate("anchor")
-      
+      if(!link){
+        return link
+      }
+if(config?.actionNoGuide){
 
-      return link
+  return link
+}
+const {url, text,...rest}  = link
+return rest
+
     } catch (e) {
       manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);
     }
@@ -1743,13 +2073,3 @@ static changeProfileVisibility = async ({user,visibility,node}:{user: IUser,visi
  * O(1) cycle check — just see if the new parent's path
  * already contains the node we're trying to move.
  */
-const wouldCreateCycle = (
-  movingNodeId: Types.ObjectId,
-  newParentPath: string
-): boolean => {
-  return newParentPath.includes(`/${movingNodeId}/`);
-};
-
-// Escape special regex chars in path strings (IDs are hex, but be safe)
-const escapeRegex = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-

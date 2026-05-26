@@ -70,6 +70,23 @@ node
       });
     }
   }
+  async getNodeFeaturedLink(req: Request, res: Response) {
+    try {
+      const { node } = req.query;
+      const data = await LinkNodeService.getNodeFeaturedLink( {
+node
+// ,user:req.user
+      });
+
+      res.json({success:true,data});
+    } catch (e) {
+      return manageReturnedError({
+        error: e,
+        overideError: ERRORSMG.SOMETHING_WENT_WRONG_ERROR,
+        res
+      });
+    }
+  }
     @ExcludeDecorator(authenticate)
   async getAbNode(req: Request, res: Response) {
     try {
@@ -135,6 +152,9 @@ user:req.query.userId
       const data = await LinkNodeService.getNode( {
 node
 ,user:req.user
+      },{
+        actionNoGuideLink:true,
+        actionNoGuide:true
       });
 
       res.json({success:true,data});
@@ -154,8 +174,12 @@ node
       const data = await LinkNodeService.getLink( {
 id
       });
-
-      res.json({success:true,data});
+      let data_ = data
+      if(data?.action){
+        let {url,text,...rest}:any = data
+        data_ = rest
+      }
+      res.json({success:true,data:data_});
     } catch (e) {
       return manageReturnedError({
         error: e,
@@ -171,7 +195,9 @@ id
      
       const data = await LinkNodeService.getLinks( {
 page:Number(page)
-      });
+      })
+
+      
 
       res.json({success:true,data});
     } catch (e) {

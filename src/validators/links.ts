@@ -43,6 +43,7 @@ export const updateNodeValidator = z.object({
   .optional(),
   // user: objectId,
   isFeatured: z.boolean().optional().nullable(),
+  featuredLinkIsNodeLevel: z.boolean().optional().nullable(),
    node: objectId,
      isAnchor: z.boolean().optional().nullable(),
   anchor: objectId.optional().nullable()
@@ -210,6 +211,7 @@ export const updateLinkValidator = z.object({
     resourceType: z.enum(convertEnumToList(E_RESOURCE_TYPES)).optional().default(E_RESOURCE_TYPES.URL),
 
   isAnchor: z.boolean().optional().nullable(),
+  featuredLinkIsNodeLevel: z.boolean().optional().nullable(),
   isFeatured: z.boolean().optional().nullable(),
   anchor: objectId.optional().nullable(),
   group: objectId.optional().nullable()
@@ -251,7 +253,7 @@ export const updateLinkValidator = z.object({
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             message: "URL is required when resourceType is URL",  })}
-            
+
     }
 
           if (data.isFeatured) {

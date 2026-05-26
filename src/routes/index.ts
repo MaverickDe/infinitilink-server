@@ -8,6 +8,7 @@ import { Notsroute } from "./notifications.route"
 
 import { AuthRoutes } from "./auth.routes"
 import { LinkNoderoute } from "./linkNode.routes"
+import { Actionroute } from "./actions.routes"
 
 // import { BankConsentRoute } from "./bankConsent.route"
 // import { Notcontroller } from "server/controllers/not.controller"
@@ -36,6 +37,7 @@ this.router.use("/auth", new AuthRoutes().router)
 this.router.use("/nots", new Notsroute().router)
 this.router.use("/ref", new Refsroute().router)
 this.router.use("/ln", new LinkNoderoute().router)
+this.router.use("/action", new Actionroute().router)
 this.router.use("/payment", new PaymentRoute().router)
 // this.router.use("/bank-consents", new BankConsentRoute().router)
     // this.router.get("/admin", this.notcontroller.getAdminNotification.bind(this.notcontroller))

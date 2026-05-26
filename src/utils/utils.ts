@@ -410,3 +410,15 @@ export const sortByPosition = <T extends { position?: number | null }>(arr: T[])
     return aPos - bPos;
   });
 };
+
+
+export const wouldCreateCycle = (
+  movingNodeId: Types.ObjectId,
+  newParentPath: string
+): boolean => {
+  return newParentPath.includes(`/${movingNodeId}/`);
+};
+
+// Escape special regex chars in path strings (IDs are hex, but be safe)
+export const escapeRegex = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+

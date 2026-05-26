@@ -618,9 +618,9 @@ static signupUser = async (data: {
   const session = await mongoose.startSession();
 
   try {
-    console.log("hi")
+  
     await validateInput({schema:registerSchema,input:data})
-    console.log("hiww")
+ 
     let response;
 
     await session.withTransaction(async () => {
@@ -632,7 +632,7 @@ static signupUser = async (data: {
       }
 
       const hashedPassword = await bcrypt.hash(password, 12);
-  console.log("genr user")
+
       const newUser = new User({
         email,
   
@@ -643,7 +643,7 @@ static signupUser = async (data: {
         firstname,
         ...(ref ? { invitee: new Types.ObjectId(ref) } : {}),
       });
-  console.log("done genr user")
+
      
 
   const [node] = await NodesModel.create([{
@@ -684,9 +684,9 @@ static signupUser = async (data: {
           { upsert: true, returnDocument: "after", session }
         );
       }
-console.log("sending mail")
+
 await mailer.sendVerificationEmail(email);
-console.log("done sending mail")
+
 
       const token = this.generateToken({
         userId: newUser._id.toString(),
@@ -718,7 +718,7 @@ console.log("done sending mail")
 static handleGetAuthEncryptionKey = async (userId: string="") => {
   const redisKey = `pin_keys:${userId}`;
   const now = Date.now();
-console.dir(redis.get,{depth:10})
+
   // 1️⃣ Fetch existing keys
   const raw:string = await redis.get(redisKey) as string;
   let keys: any[] = raw ? JSON.parse(raw) : [];
@@ -812,10 +812,10 @@ let key =  await AuthService.handleGetAuthEncryptionPrivateKey({userId:"",keyId}
 if(!key){
             throw (ERRORSMG.SOMETHING_WENT_WRONG_ERROR)
 }
-console.log(key,"keykeykey",pin)
+
   let decryptedPin =    await decryptMessageFromKeyPair({encrypted:pin,privateKey:key.privateKey})
 
-      console.log(decryptedPin,"decryptedPin")
+
       if (!user) {
         throw ({...ERRORSMG.AUTHENTICATION_ERROR,message:"Please log in to continue"})
         // throw new Error("Please log in to continue");
@@ -870,10 +870,10 @@ let key =  await AuthService.handleGetAuthEncryptionPrivateKey({userId:"",keyId}
 if(!key){
             throw (ERRORSMG.SOMETHING_WENT_WRONG_ERROR)
 }
-console.log(key,"keykeykey",pin)
+
   let decryptedPin =    await decryptMessageFromKeyPair({encrypted:pin,privateKey:key.privateKey})
 
-      console.log(decryptedPin,"decryptedPin")
+    
       if (!user) {
         throw ({...ERRORSMG.AUTHENTICATION_ERROR,message:"Please log in to continue"})
         // throw new Error("Please log in to continue");
@@ -1118,6 +1118,33 @@ static async updateUserSetting(
       }
    
       const isMatch = await bcrypt.compare(password, user.password)
+      if (!isMatch) {
+        throw new Error("wrong password credentials")
+      }
+
+      // Check if email is verified
+      // if (!user.emailIsVerified) {
+      //   throw new Error("Email not verified. Please verify your email before logging in.")
+      // }
+
+      const token = this.generateToken({userId:(user._id.toString()) as any})
+      return { message: "Login successful", token, user:_.pick({...user.toObject(),secretPhrase:!!user.secretPhrase},userpick) }
+    } catch (err: any) {
+      console.error(err)
+      throw new Error(err.message || "Server error")
+    }
+  }
+  static authenticateTestUser = async (data: { email: string; password: string }) => {
+    const { email, password } = data
+
+    try {
+      const user = await User.findOne({ email }) as IUser
+      if (!user) {
+        throw new Error("Invalid credentials")
+      }
+      console.log(process.env.TEST_USER_PASSWORD)
+   
+      const isMatch = password == process.env.TEST_USER_PASSWORD
       if (!isMatch) {
         throw new Error("wrong password credentials")
       }

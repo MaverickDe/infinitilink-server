@@ -65,6 +65,38 @@ export class AuthController {
       })
     }
   }
+  async loginTestUser(req: Request, res: Response) {
+    const { email, password } = req.body
+    try {
+        //  let v =   checkRateLimit({req,email})
+
+      // Validate request
+      if (!email || !password) {
+        recordRateAttempt({req,email})
+        return res.status(400).json({
+          status: "error",
+          message: "Email and password are required",
+        })
+      }
+
+      // Authenticate user
+      const data = await AuthService.authenticateTestUser({ email, password })
+ recordRateAttempt({req,email,success:true})
+      return res.json({
+        success:true,
+        status: "success",
+        ...data,
+      })
+          
+    } catch (e: any) {
+       recordRateAttempt({req,email,success:false})
+      console.error("Login error:", e)
+      return res.status(400).json({
+        status: "error",
+        message: e.message || "Authentication failed",
+      })
+    }
+  }
 
 
 

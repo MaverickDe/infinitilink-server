@@ -11,12 +11,14 @@ export interface INodes extends Document {
 
   anchor: Types.ObjectId | INodes;
   node?: Types.ObjectId | INodes;
+  action?: Types.ObjectId;
   description: String;
   username?: String;
   links: Number;
   clicks: Number;
   views: Number;
   comments: Number;
+  actions?: Number;
   likes: Number;
   nodes: Number;
   logo?: String;
@@ -24,6 +26,7 @@ export interface INodes extends Document {
   isPrivate: boolean;
   nodesIsVisible: boolean;
   userIsVisibleInNode: boolean;
+  featuredLinkIsNodeLevel: boolean;
    userIsVisibleInNodeTimeStamp:Date
   isVisible: boolean;
   isMain: boolean;
@@ -121,16 +124,32 @@ username: {
       required: false, 
       default: true 
     }, 
+       featuredLinkIsNodeLevel: { 
+      type: Boolean, 
+      required: false, 
+      default: true 
+    }, 
       userIsVisibleInNodeTimeStamp: { type: Date,  },
        isVisible: { 
       type: Boolean, 
       required: false, 
       default: true 
     }, 
+           actions: { 
+      type: Number, 
+      required: false, 
+       default: 0
+     
+    },  
     user: { 
       type: mongoose.Schema.Types.ObjectId, 
       ref: "User", 
       required: true 
+    },
+    action: { 
+      type: mongoose.Schema.Types.ObjectId, 
+      // ref: "User", 
+      // required: true 
     },
         anchor: { 
           type: mongoose.Schema.Types.ObjectId, 
