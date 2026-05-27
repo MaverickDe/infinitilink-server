@@ -65,7 +65,9 @@ async performResouceAction(req: Request, res: Response) {
     //   const { name, description } = req.body;
       const action = await ActionsService.performResouceAction( req.body,
         req.query.id as string, 
-          req.user);
+        {...  req.query??{} as any},
+          req.user,
+        );
 
       res.json({success:true,data:action});
     }
@@ -128,7 +130,10 @@ async removeActionFromResource(req: Request, res: Response) {
 async getResourceAction(req: Request, res: Response) {
     try {
     //   const { name, description } = req.body;
-      const data = await ActionsService.getResourceAction( req.query.id as string);
+    console.log(req.query,"nmrss")
+      const data = await ActionsService.getResourceAction( {resourceId:req.query.id as string,
+        resourceActionId:req.query.resourceActionId as string,
+      });
 
       res.json({success:true,data:data});
     }

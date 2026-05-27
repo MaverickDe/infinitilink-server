@@ -5,7 +5,7 @@ import { validateInput, manageGeneralError, overideObj, sortByPosition, buildPat
 import { ERRORSMG } from "../error/error";
 import { E_STORAGE_FOLDER } from "../storage";
 import { E_RESOURCE_TYPES, ILinks, LinksModel } from "../models/links";
-import { NodesModel, NodesModelName } from "../models/node";
+import { INodes, NodesModel, NodesModelName } from "../models/node";
 import { createLinkValidator ,
 
 
@@ -16,7 +16,7 @@ import { createLinkValidator ,
   createLinkGroupValidator,
   updateLinkGroupValidator
 } from "../validators/links";
-import { LinkGroupModel } from "../models/linkGroup";
+import { ILinkGroup, LinkGroupModel } from "../models/linkGroup";
 import { IUser, User } from "../models/user";
 import { group } from "console";
 import { v2 as cloudinary } from 'cloudinary';
@@ -603,7 +603,9 @@ if (Types.ObjectId.isValid(nodeId)) {
        anchorNode = await NodesModel.findOne({_id:node?.anchor}).populate(this.populateuser);;
 
     }
-    if((node?.action||anchorNode?.action) && !config?.actionNoGuide){
+
+    let defnode = anchorNode || node
+    if((defnode?.action) && !config?.actionNoGuide){
 
       return {
       node,
@@ -650,15 +652,15 @@ let links = links_
 
     }
 
-// const featuredLinkIsNodeLevel = node?.featuredLinkIsNodeLevel;
-
-// const featuredLinks = await LinksModel.find({
-//   user: anchorNode?.user || userObjectId,
-//   isFeatured: true,
-
-
-// });
-
+    
+    // const featuredLinks = await LinksModel.find({
+      //   user: anchorNode?.user || userObjectId,
+      //   isFeatured: true,
+      
+      
+      // });
+      
+      // const featuredLinkIsNodeLevel = node?.featuredLinkIsNodeLevel;
 
 
 
@@ -1773,7 +1775,7 @@ static searchNode = async ({ data, node: nodeId }: { data: any; node: string }) 
       const link = await LinksModel.findOne({
         _id: new Types.ObjectId(id),
         // isFeatured:false
-      }).populate("anchor")
+      }).populate("anchor group node")
       if(!link){
         return link
       }
@@ -1781,8 +1783,13 @@ if(config?.actionNoGuide){
 
   return link
 }
-const {url, text,...rest}  = link
-return rest
+if(link?.action || (link?.node as INodes)?.action || (link?.group as ILinkGroup)?.action){
+
+  const {url, text,...rest}  = link.toObject()
+  return rest
+}
+
+return link
 
     } catch (e) {
       manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);

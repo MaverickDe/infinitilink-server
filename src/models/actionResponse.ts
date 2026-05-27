@@ -8,11 +8,11 @@ export interface IActionResponse extends Document {
   action: Types.ObjectId;
   resourceAction: Types.ObjectId;
   user?: Types.ObjectId;
-
+isDeleted:boolean
   responseType: String;
 
   responsePayload: any;
-
+    uniqueGroupId?: Types.ObjectId;
   normalized?: Record<string, any>;
 
   status: "pending" | "approved" | "rejected";
@@ -33,7 +33,7 @@ const ActionResponseSchema = new Schema<IActionResponse>(
       enum: convertEnumToList(E_ActionTypes),
       required: true,
     },
-
+ uniqueGroupId: { type: Schema.Types.ObjectId },
     responsePayload: {
       type: Schema.Types.Mixed,
       required: true,
@@ -43,6 +43,11 @@ const ActionResponseSchema = new Schema<IActionResponse>(
       type: Schema.Types.Mixed,
       default: {},
     },
+        isDeleted: { 
+      type: Boolean, 
+      required: false, 
+      default: false 
+    }, 
 
     status: {
       type: String,
@@ -74,13 +79,20 @@ export interface IActionUniqueField extends Document {
   field: string;
   value: string;
   compositeKey: string;
+  isDeleted:boolean
+      uniqueGroupId?: Types.ObjectId;
 }
 
 
 const ActionUniqueFieldSchema = new Schema<IActionUniqueField>(
   {
+        isDeleted: { 
+      type: Boolean, 
+      required: false, 
+      default: false 
+    }, 
     action: { type: Schema.Types.ObjectId, required: true },
-
+ uniqueGroupId: { type: Schema.Types.ObjectId },
     field: { type: String, required: true },
 
     value: { type: String, required: true },

@@ -149,6 +149,7 @@ export interface IResouceAction extends Document {
     user?: Types.ObjectId;
     uniqueGroupId?: Types.ObjectId;
       resourceType: E_RESOURCE_LEVELS;
+      isDeleted?: boolean;
 
 
 
@@ -238,7 +239,11 @@ const ActionsSchema = new Schema<IActions>(
 const ResouceActionSchema = new Schema<IResouceAction>(
   {
 
-
+    isDeleted: { 
+      type: Boolean, 
+      required: false, 
+      default: false 
+    }, 
     resourceType: {
       type: String,
       enum: convertEnumToList(E_RESOURCE_LEVELS),

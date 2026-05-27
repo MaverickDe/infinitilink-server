@@ -14,6 +14,7 @@ import { IUser, User } from "../models/user";
 import { E_ActionTypes } from "../enums";
 import { LinkGroupModel } from "../models/linkGroup";
 import { LinkNodeService } from "./linkNode.service";
+import { truncateSync } from "fs";
 
 
 export class ActionsService {
@@ -287,10 +288,17 @@ static performPasswordAction = async (data: any, actionData: any) => {
 
   const ok = data.password === actionData.config.passwordHash;
 
-  return {
-    success: ok,
-    message: ok ? "Password is correct" : "Password is incorrect",
-  };
+if(!ok){
+  throw manageGeneralError(
+    overideObj(ERRORSMG.VALIDATION_ERROR, {
+      message: "Incorrect password",
+    })
+);
+
+
+}
+
+return
 };
 static performFormAction = async (data:any,resouceActionData:any,user?:IUser) =>{
 
@@ -321,6 +329,7 @@ if (actionData.config.type === "formdata") {
   const uniqueEntries = uniqueFields.map((f: any) => ({
     action: new Types.ObjectId(resouceActionData._id?.toString()),
     field: f.name,
+   uniqueGroupId: resouceActionData.uniqueGroupId,
     value: validated[f.name], // 🔥 REAL VALUE (IMPORTANT FIX)
     compositeKey: `${resouceActionData._id}:${f.name}:${validated[f.name]}`,
   }));
@@ -333,6 +342,7 @@ if (actionData.config.type === "formdata") {
     action: actionData._id,
     resourceAction:new Types.ObjectId(resouceActionData._id?.toString()),
     // userId: user?._id,
+    uniqueGroupId: resouceActionData.uniqueGroupId,
     responseType: E_ActionTypes.formdata,
     responsePayload: validated,
   });
@@ -344,7 +354,7 @@ return {success:true}
 
 }
 
-static performResouceAction = async (data:any,resourceActionId:string,user?:IUser) =>{
+static performResouceAction = async (data:any,resourceActionId:string,config:any,user?:IUser) =>{
     try{
 
         let resouceActionData = await ResouceActionModel.findById(resourceActionId).populate("action");
@@ -358,9 +368,65 @@ static performResouceAction = async (data:any,resourceActionId:string,user?:IUse
             );          
         }
     
+
+        let mainResourceId = resouceActionData?.resource?.toString()??"";
+        let mainResourceType = resouceActionData?.resourceType;
         let action = await this.performAction(data,resouceActionData,user);
+        let resouceLevel = resouceActionData?.resourceType;
+        // console.log("config in performResouceAction",config )
+        // console.log("resouceActionData in performResouceAction",resouceActionData)
+        if(config?.enforceResourceLevelId){
+          let isExist = false;
+          if(resouceLevel === E_RESOURCE_LEVELS.NODE){
+          let linkisnodechildexist = await LinksModel.exists({ node:resouceActionData?.resource,_id:new Types.ObjectId(config.enforceResourceLevelId)});
+          if(linkisnodechildexist){
+            isExist = true
+            
+          }
+          }
+          if(resouceLevel === E_RESOURCE_LEVELS.GROUP){
+          let linkisnodechildexist = await LinksModel.exists({ group:resouceActionData?.resource,_id:new Types.ObjectId(config.enforceResourceLevelId)});
+          if(linkisnodechildexist){
+            isExist =true
+
+          }
+          }
+
+          if(isExist){
+            mainResourceId = config.enforceResourceLevelId;
+            mainResourceType = E_RESOURCE_LEVELS.LINK
+          }
+        
+
+        }
+        if(config?.enforceAnchorResourceId){
+         
+          if(resouceLevel === E_RESOURCE_LEVELS.NODE){
+          let linkisnodechildexist = await NodesModel.exists({ anchor:resouceActionData?.resource,_id:new Types.ObjectId(config.enforceAnchorResourceId)});
+          if(linkisnodechildexist){
+             mainResourceId = config.enforceAnchorResourceId;
+            // mainResourceType = E_RESOURCE_LEVELS.NODE
+            
+          }
+          }
+          if(resouceLevel === E_RESOURCE_LEVELS.LINK){
+          let linkisnodechildexist = await LinksModel.exists({ anchor:resouceActionData?.resource,_id:new Types.ObjectId(config.enforceAnchorResourceId)});
+          if(linkisnodechildexist){
+        
+
+            mainResourceId = config.enforceAnchorResourceId;
+            // mainResourceType = E_RESOURCE_LEVELS.LINK
+          }
+          }
+
+       
+        
+
+        }
+
+     
     
-        return await this.getDataForActionResponse(resouceActionData?.resource?.toString()??"",resouceActionData.resourceType,{_id:(resouceActionData?.action as IActions)?.user as Types.ObjectId} as any);
+        return await this.getDataForActionResponse(mainResourceId,mainResourceType,{_id:(resouceActionData?.action as IActions)?.user as Types.ObjectId} as any);
         // if( action?.success)
         // {
         // }
@@ -379,11 +445,11 @@ static performResouceAction = async (data:any,resourceActionId:string,user?:IUse
 }
 
 static getResouceActionResponses = async ({
-  actionId,
+  id:resourceActionId,
   page = 1,
   user,
   resourceType
-}:{actionId:string,page?:number,user:IUser,resourceType:String}) => {
+}:{id:string,page?:number,user:IUser,resourceType:String}) => {
   try {
     const limit = 100;
 
@@ -391,8 +457,10 @@ static getResouceActionResponses = async ({
 
     const offset = (page - 1) * limit;
 
-    const data = await ResouceActionModel.find({
-      action: new Types.ObjectId(actionId),resourceType
+    const data = await ActionsResponseModel.find({
+      resourceAction: new Types.ObjectId(resourceActionId),
+      // user: new Types.ObjectId(user?._id?.toString()),
+      // resourceType
     })
       .skip(offset)
       .limit(limit);
@@ -511,6 +579,7 @@ applyToDescendants?:boolean
 
   const existing = await ResouceActionModel.findOne({
   resource: resourceId,
+    //  isDeleted: false,
         user: new Types.ObjectId(user?._id?.toString()),
   // action: action._id,
   resourceType,
@@ -561,11 +630,14 @@ let uniqueGroupId = new mongoose.Types.ObjectId();
           resource: descendantId,
                 user: new Types.ObjectId(user?._id?.toString()),
           // action: action._id,
+            //  isDeleted: false,
+          
           resourceType: E_RESOURCE_LEVELS.NODE,
           
         },
         update: {
           $set: {
+               isDeleted: false,
                   user: new Types.ObjectId(user?._id?.toString()),
             resource: descendantId,
             action: action._id,
@@ -583,6 +655,7 @@ let uniqueGroupId = new mongoose.Types.ObjectId();
       resource: { $in: descendantIds },
       action: action._id,
       resourceType: E_RESOURCE_LEVELS.NODE,
+        //  isDeleted: false,
     },
     { _id: 1, resource: 1 }
   ).lean();
@@ -611,12 +684,14 @@ let uniqueGroupId = new mongoose.Types.ObjectId();
   resource = await ResouceActionModel.findOneAndUpdate(
     {
       resource: node._id,
+      // isDeleted: false,
             user: new Types.ObjectId(user?._id?.toString()),
       // action: action._id,
       resourceType: E_RESOURCE_LEVELS.NODE,
     },
     {
       $set: {
+        isDeleted: false, // In case it was previously deleted
               user: new Types.ObjectId(user?._id?.toString()),
         resource: node._id,
         action: action._id,
@@ -653,12 +728,14 @@ return resource; // same shape regardless of which branch ran
       let resource  = await ResouceActionModel.findOneAndUpdate(
       {
         resource: link._id,
+          //  isDeleted: false,
               user: new Types.ObjectId(user?._id?.toString()),
         // action: action._id,
         resourceType: E_RESOURCE_LEVELS.LINK,
       },
       {
         $set: {
+              isDeleted: false,
           resource: link._id,
                 user: new Types.ObjectId(user?._id?.toString()),
           action: action._id,
@@ -693,12 +770,14 @@ return resource; // same shape regardless of which branch ran
     let resource =   await ResouceActionModel.findOneAndUpdate(
       {
         resource: linkGroup._id,
+          //  isDeleted: false,
               user: new Types.ObjectId(user?._id?.toString()),
         // action: action._id,
         resourceType: E_RESOURCE_LEVELS.GROUP,
       },
       {
         $set: {
+              isDeleted: false,
                 user: new Types.ObjectId(user?._id?.toString()),
           resource: linkGroup._id,
           action: action._id,
@@ -728,9 +807,16 @@ return resource; // same shape regardless of which branch ran
 
 
 
-static getResourceAction = async (resourceId:string) =>{
+static getResourceAction = async ({resourceId,resourceActionId}:{resourceId?:string,resourceActionId?:string}) =>{
   // let resouceData =
-  return ResouceActionModel.findOne({resource:resourceId}).populate("action");
+  let v:any = {   }
+  if(resourceId){
+    v = {resource: new Types.ObjectId(resourceId),}
+  }
+  if(resourceActionId){
+    v = {_id: new Types.ObjectId(resourceActionId), }
+  }   
+  return ResouceActionModel.findOne(v).populate("action");
 }
 
 static removeActionFromResource = async (
@@ -807,155 +893,487 @@ applyToDescendants?:boolean},
 
   //   return { success: true };
   // }
+let resourceActionId = ""
+let uniqueGroupId: any = null
 
-  if (resourceType === E_RESOURCE_LEVELS.NODE) {
-  const node = await NodesModel.findOne({
-          user: new Types.ObjectId(user?._id?.toString()),
-          _id: new Types.ObjectId(resourceId),
+switch (resourceType) {
+  case E_RESOURCE_LEVELS.NODE: {
+    const node = await NodesModel.findOne({
+      user: new Types.ObjectId(user?._id?.toString()),
+      _id: new Types.ObjectId(resourceId),
+    }, { _id: 1, action: 1, path: 1, user: 1 }).lean();
 
-    
-    }, { _id: 1, action: 1, path: 1 ,user:1 }).lean();
-
-  if (!node) {
-    throw manageGeneralError(
-      overideObj(ERRORSMG.VALIDATION_ERROR, { message: "Node not found" })
-    );
-  }
-
-  const removed = await ResouceActionModel.findOneAndDelete({
-    _id: node.action,
-          user: new Types.ObjectId(user?._id?.toString()),
-    resourceType: E_RESOURCE_LEVELS.NODE,
-  });
-
-  if (!removed) {
-    return { success: true, message: "Already removed" };
-  }
-
-  if (applyToDescendants && removed.uniqueGroupId) {
-    // Delete all resource actions sharing the same group in one shot
-    await ResouceActionModel.deleteMany({
-      uniqueGroupId: removed.uniqueGroupId,
-            user: new Types.ObjectId(user?._id?.toString()),
-      resourceType: E_RESOURCE_LEVELS.NODE,
-    });
-
-    // Get all descendant node IDs via path prefix
-    const descendants = await NodesModel.find(
-      {
-        user: node.user,
-        path: { $regex: `^${escapeRegex(node.path)}` },
-      },
-      { _id: 1 }
-    ).lean();
-
-    const descendantIds = descendants.map((d) => d._id);
-// console.log(descendantIds,"descendantIdsdd to clear action from",node)
-    // Clear action field and decrement counter on all descendants + node itself
-    await NodesModel.bulkWrite(
-      descendantIds.map((descendantId) => ({
-        updateOne: {
-          filter: { _id: descendantId },
-          update: {
-            $inc: { actions: -1 },
-            $set: { action: null },
-          },
-        },
-      }))
-    );
-  } else {
-    // Single node only
-    await NodesModel.updateOne(
-      { _id: node._id },
-      { $inc: { actions: -1 }, $set: { action: null } }
-    );
-  }
-
-  return { success: true };
-}
-
-    if (resourceType === E_RESOURCE_LEVELS.LINK) {
-    const link = await LinksModel.findOne({ 
-       user: new Types.ObjectId(user?._id?.toString()),
-       _id: new Types.ObjectId(resourceId)
-      
-      });
-
-    if (!link) {
+    if (!node) {
       throw manageGeneralError(
-        overideObj(ERRORSMG.VALIDATION_ERROR, {
-          message: "Link not found",
-        })
+        overideObj(ERRORSMG.VALIDATION_ERROR, { message: "Node not found" })
       );
     }
 
-    const removed = await ResouceActionModel.findOneAndDelete({
-      // resource: link._id,
-        user: new Types.ObjectId(user?._id?.toString()),
+    const removed = await ResouceActionModel.findOne({
+      _id: node.action,
+      user: new Types.ObjectId(user?._id?.toString()),
+      resourceType: E_RESOURCE_LEVELS.NODE,
+      
+    });
+
+    if (!removed) break;
+
+    // ✅ Soft delete
+    await ResouceActionModel.updateOne(
+      { _id: removed._id },
+      { $set: { isDeleted: true } }
+    );
+
+    resourceActionId = removed._id?.toString() ?? "";
+
+    if (applyToDescendants && removed.uniqueGroupId) {
+      uniqueGroupId = removed.uniqueGroupId;
+
+      // ✅ Soft delete all in the group instead of deleteMany
+      await ResouceActionModel.updateMany(
+        {
+          uniqueGroupId: removed.uniqueGroupId,
+          user: new Types.ObjectId(user?._id?.toString()),
+          resourceType: E_RESOURCE_LEVELS.NODE,
+        },
+        { $set: { isDeleted: true } }
+      );
+
+      const descendants = await NodesModel.find(
+        {
+          user: node.user,
+          path: { $regex: `^${escapeRegex(node.path)}` },
+        },
+        { _id: 1 }
+      ).lean();
+
+      const descendantIds = descendants.map((d) => d._id);
+
+      await NodesModel.bulkWrite(
+        descendantIds.map((descendantId) => ({
+          updateOne: {
+            filter: { _id: descendantId },
+            update: { $inc: { actions: -1 }, $set: { action: null } },
+          },
+        }))
+      );
+    } else {
+      await NodesModel.updateOne(
+        { _id: node._id },
+        { $inc: { actions: -1 }, $set: { action: null } }
+      );
+    }
+    break;
+  }
+
+  case E_RESOURCE_LEVELS.LINK: {
+    const link = await LinksModel.findOne({
+      user: new Types.ObjectId(user?._id?.toString()),
+      _id: new Types.ObjectId(resourceId),
+    });
+
+    if (!link) {
+      throw manageGeneralError(
+        overideObj(ERRORSMG.VALIDATION_ERROR, { message: "Link not found" })
+      );
+    }
+
+    const removed = await ResouceActionModel.findOne({
+      user: new Types.ObjectId(user?._id?.toString()),
       _id: link.action,
       resourceType: E_RESOURCE_LEVELS.LINK,
     });
 
-    // if (!removed) {
-    //   return { success: true, message: "Already removed" };
-    // }
+    if (removed) {
+      // ✅ Soft delete
+      await ResouceActionModel.updateOne(
+        { _id: removed._id },
+        { $set: { isDeleted: true } }
+      );
+      resourceActionId = removed._id?.toString() ?? "";
+    }
 
     await LinksModel.updateOne(
-      { _id: link._id,  user: new Types.ObjectId(user?._id?.toString()), },
+      { _id: link._id, user: new Types.ObjectId(user?._id?.toString()) },
       {
-        $inc: {
-          actions: -1 < 0 ? 0 : -1, // safety guard
-          
-        },
-        $set:{action:null}
+        $inc: { actions: -1 < 0 ? 0 : -1 },
+        $set: { action: null },
       }
     );
-
-    return { success: true };
+    break;
   }
-    if (resourceType === E_RESOURCE_LEVELS.GROUP) {
+
+  case E_RESOURCE_LEVELS.GROUP: {
     const group = await LinkGroupModel.findOne({
-        user: new Types.ObjectId(user?._id?.toString()),
-        _id: new Types.ObjectId(resourceId),
+      user: new Types.ObjectId(user?._id?.toString()),
+      _id: new Types.ObjectId(resourceId),
     });
 
     if (!group) {
       throw manageGeneralError(
-        overideObj(ERRORSMG.VALIDATION_ERROR, {
-          message: "Link group not found",
-        })
+        overideObj(ERRORSMG.VALIDATION_ERROR, { message: "Link group not found" })
       );
     }
 
-    const removed = await ResouceActionModel.findOneAndDelete({
-      // resource: group._id,
-        user: new Types.ObjectId(user?._id?.toString()),
+    const removed = await ResouceActionModel.findOne({
+      user: new Types.ObjectId(user?._id?.toString()),
       _id: group.action,
       resourceType: E_RESOURCE_LEVELS.GROUP,
     });
 
-    if (!removed) {
-      return { success: true, message: "Already removed" };
-    }
+    if (!removed) break;
+
+    // ✅ Soft delete
+    await ResouceActionModel.updateOne(
+      { _id: removed._id },
+      { $set: { isDeleted: true } }
+    );
+    resourceActionId = removed._id?.toString() ?? "";
 
     await LinkGroupModel.updateOne(
-      { _id: group._id,  user: new Types.ObjectId(user?._id?.toString()), },
+      { _id: group._id, user: new Types.ObjectId(user?._id?.toString()) },
       {
-        $inc: {
-          actions: -1 < 0 ? 0 : -1,
-        },
-        $set:{action:null}
+        $inc: { actions: -1 < 0 ? 0 : -1 },
+        $set: { action: null },
       }
     );
-
-    return { success: true };
+    break;
   }
+
+  default: {
     throw manageGeneralError(
-    overideObj(ERRORSMG.VALIDATION_ERROR, {
-      message: "Invalid resource type",
-    })
+      overideObj(ERRORSMG.VALIDATION_ERROR, { message: "Invalid resource type" })
+    );
+  }
+}
+
+// ✅ Soft delete related records instead of deleteMany
+if (false && resourceActionId) {
+  await ActionsResponseModel.updateMany(
+    { resourceAction: new Types.ObjectId(resourceActionId) },
+    { $set: { isDeleted: true } }
   );
+
+  await ActionUniqueFieldModel.updateMany(
+    { action: new Types.ObjectId(resourceActionId) },
+    { $set: { isDeleted: true } }
+  );
+}
+
+// ✅ Soft delete group-related records when applyToDescendants
+if (false && uniqueGroupId) {
+  const groupActionIds = await ResouceActionModel.find(
+    { uniqueGroupId },
+    { _id: 1 }
+  ).lean();
+
+  const ids = groupActionIds.map((a) => a._id);
+
+  await ActionsResponseModel.updateMany(
+    { resourceAction: { $in: ids } },
+    { $set: { isDeleted: true } }
+  );
+
+  await ActionUniqueFieldModel.updateMany(
+    { action: { $in: ids } },
+    { $set: { isDeleted: true } }
+  );
+}
+
+
+
+return { success: true };
+
+
+
+
+  
+
 };
+// static removeActionFromResource = async (
+// { 
+//   //  actionId,
+//   resourceId,
+//   applyToDescendants,
+//   resourceType}:{  actionId: string,
+//   resourceId: string,
+//   resourceType: E_RESOURCE_LEVELS,
+// applyToDescendants?:boolean},
+//   user:IUser
+// ) => {
+//   // if (!mongoose.Types.ObjectId.isValid(actionId)) {
+//   //   throw manageGeneralError(
+//   //     overideObj(ERRORSMG.VALIDATION_ERROR, {
+//   //       message: "Invalid action idd",
+//   //     })
+//   //   );
+//   // }
+
+//   if (!mongoose.Types.ObjectId.isValid(resourceId)) {
+//     throw manageGeneralError(
+//       overideObj(ERRORSMG.VALIDATION_ERROR, {
+//         message: "Invalid resource id",
+//       })
+//     );
+//   }
+
+//   // const action = await ActionsModel.findById(actionId);
+
+//   // if (!action) {
+//   //   throw manageGeneralError(
+//   //     overideObj(ERRORSMG.VALIDATION_ERROR, {
+//   //       message: "Action not found",
+//   //     })
+//   //   );
+//   // }
+//   //   if (resourceType === E_RESOURCE_LEVELS.NODE) {
+//   //   const node = await NodesModel.findById(resourceId);
+
+//   //   if (!node) {
+//   //     throw manageGeneralError(
+//   //       overideObj(ERRORSMG.VALIDATION_ERROR, {
+//   //         message: "Node not found",
+//   //       })
+//   //     );
+//   //   }
+
+//   //   const removed = await ResouceActionModel.findOneAndDelete({
+//   //     // resource: node._id,
+//   //     _id: node.action,
+//   //     resourceType: E_RESOURCE_LEVELS.NODE,
+//   //   });
+
+//   //   if (!removed) {
+//   //     return { success: true, message: "Already removed" };
+//   //   }
+
+//   //   if(applyToDescendants){
+//   //         const removeds = await ResouceActionModel.findOneAndDelete({
+//   //     // resource: node._id,
+//   //  unqiueGroupId: removed.unqiueGroupId,
+//   //     resourceType: E_RESOURCE_LEVELS.NODE,
+//   //   });
+//   //   }else{
+
+//   //   }
+
+//   //   await NodesModel.updateOne(
+//   //     { _id: node._id },
+//   //     { $inc: { actions: -1 } ,$set:{action:null} }
+//   //   );
+
+//   //   return { success: true };
+//   // }
+
+//   let resourceActionId = ""
+//   let uniqueGroupId:any = null
+// switch(resourceType){
+//     case E_RESOURCE_LEVELS.NODE: {
+//   const node = await NodesModel.findOne({
+//           user: new Types.ObjectId(user?._id?.toString()),
+//           _id: new Types.ObjectId(resourceId),
+
+    
+//     }, { _id: 1, action: 1, path: 1 ,user:1 }).lean();
+
+//   if (!node) {
+//     throw manageGeneralError(
+//       overideObj(ERRORSMG.VALIDATION_ERROR, { message: "Node not found" })
+//     );
+//   }
+
+//   // const removed = await ResouceActionModel.findOneAndDelete({
+//   //   _id: node.action,
+//   //         user: new Types.ObjectId(user?._id?.toString()),
+//   //   resourceType: E_RESOURCE_LEVELS.NODE,
+//   // });
+//   const removed = await ResouceActionModel.findOne({
+//     _id: node.action,
+//           user: new Types.ObjectId(user?._id?.toString()),
+//     resourceType: E_RESOURCE_LEVELS.NODE,
+//   });
+  
+//   if (!removed) {
+//     break
+//     // return { success: true, message: "Already removed" };
+//   }
+//   resourceActionId = removed._id?.toString()??""
+
+//   if (applyToDescendants && removed.uniqueGroupId) {
+//     uniqueGroupId = removed.uniqueGroupId
+//     // Delete all resource actions sharing the same group in one shot
+//     await ResouceActionModel.deleteMany({
+//       uniqueGroupId: removed.uniqueGroupId,
+//             user: new Types.ObjectId(user?._id?.toString()),
+//       resourceType: E_RESOURCE_LEVELS.NODE,
+//     });
+
+//     // Get all descendant node IDs via path prefix
+//     const descendants = await NodesModel.find(
+//       {
+//         user: node.user,
+//         path: { $regex: `^${escapeRegex(node.path)}` },
+//       },
+//       { _id: 1 }
+//     ).lean();
+
+//     const descendantIds = descendants.map((d) => d._id);
+// // console.log(descendantIds,"descendantIdsdd to clear action from",node)
+//     // Clear action field and decrement counter on all descendants + node itself
+//     await NodesModel.bulkWrite(
+//       descendantIds.map((descendantId) => ({
+//         updateOne: {
+//           filter: { _id: descendantId },
+//           update: {
+//             $inc: { actions: -1 },
+//             $set: { action: null },
+//           },
+//         },
+//       }))
+//     );
+//   } else {
+//     // Single node only
+//     await NodesModel.updateOne(
+//       { _id: node._id },
+//       { $inc: { actions: -1 }, $set: { action: null } }
+//     );
+//   }
+// break
+//   // return { success: true };
+// }
+//     case  E_RESOURCE_LEVELS.LINK: {
+//     const link = await LinksModel.findOne({ 
+//        user: new Types.ObjectId(user?._id?.toString()),
+//        _id: new Types.ObjectId(resourceId)
+      
+//       });
+
+//     if (!link) {
+//       throw manageGeneralError(
+//         overideObj(ERRORSMG.VALIDATION_ERROR, {
+//           message: "Link not found",
+//         })
+//       );
+//     }
+
+//     // const removed = await ResouceActionModel.findOneAndDelete({
+//     //   // resource: link._id,
+//     //     user: new Types.ObjectId(user?._id?.toString()),
+//     //   _id: link.action,
+//     //   resourceType: E_RESOURCE_LEVELS.LINK,
+//     // });
+//     const removed = await ResouceActionModel.findOne({
+//       // resource: link._id,
+//         user: new Types.ObjectId(user?._id?.toString()),
+//       _id: link.action,
+//       resourceType: E_RESOURCE_LEVELS.LINK,
+//     });
+
+//     // if (!removed) {
+//     //   return { success: true, message: "Already removed" };
+//     // }
+//     if(removed){
+
+//       resourceActionId = removed._id?.toString()??""
+//     }
+//     await LinksModel.updateOne(
+//       { _id: link._id,  user: new Types.ObjectId(user?._id?.toString()), },
+//       {
+//         $inc: {
+//           actions: -1 < 0 ? 0 : -1, // safety guard
+          
+//         },
+//         $set:{action:null}
+//       }
+//     );
+// break
+//     // return { success: true };
+//   }
+
+// case   E_RESOURCE_LEVELS.GROUP:{
+//     const group = await LinkGroupModel.findOne({
+//         user: new Types.ObjectId(user?._id?.toString()),
+//         _id: new Types.ObjectId(resourceId),
+//     });
+
+//     if (!group) {
+//       throw manageGeneralError(
+//         overideObj(ERRORSMG.VALIDATION_ERROR, {
+//           message: "Link group not found",
+//         })
+//       );
+//     }
+
+//     // const removed = await ResouceActionModel.findOneAndDelete({
+//     //   // resource: group._id,
+//     //     user: new Types.ObjectId(user?._id?.toString()),
+//     //   _id: group.action,
+//     //   resourceType: E_RESOURCE_LEVELS.GROUP,
+//     // });
+//     const removed = await ResouceActionModel.findOne({
+//       // resource: group._id,
+//         user: new Types.ObjectId(user?._id?.toString()),
+//       _id: group.action,
+//       resourceType: E_RESOURCE_LEVELS.GROUP,
+//     });
+
+//     if (!removed) {
+//       break
+//       // return { success: true, message: "Already removed" };
+//     }
+//     if(removed){
+//        resourceActionId = removed._id?.toString()??""
+//     }
+
+//     await LinkGroupModel.updateOne(
+//       { _id: group._id,  user: new Types.ObjectId(user?._id?.toString()), },
+//       {
+//         $inc: {
+//           actions: -1 < 0 ? 0 : -1,
+//         },
+//         $set:{action:null}
+//       }
+//     );
+// break
+// }
+
+// default:{
+//       throw manageGeneralError(
+//       overideObj(ERRORSMG.VALIDATION_ERROR, {
+//         message: "Invalid resource type",
+//       })
+//     );  
+//   }
+
+
+// }
+// // if (resourceActionId) {
+// //     await ActionsResponseModel.deleteMany({
+// //         resourceAction: new Types.ObjectId(resourceActionId),
+// //     });
+
+// //     await ActionUniqueFieldModel.deleteMany({
+// //         action: new Types.ObjectId(resourceActionId),
+// //     });
+// // }
+// // if (uniqueGroupId) {
+// //     await ActionsResponseModel.deleteMany({
+// //         resourceAction: new Types.ObjectId(uniqueGroupId?.toString()),
+// //     });
+
+// //     await ActionUniqueFieldModel.deleteMany({
+// //         action: new Types.ObjectId(uniqueGroupId?.toString()),
+// //     });
+// // }
+
+// return { success: true };
+
+
+
+
+  
+
+// };
 
 
 
