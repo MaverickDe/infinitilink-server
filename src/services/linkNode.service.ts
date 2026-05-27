@@ -63,7 +63,7 @@ const nodePromise = node
 
 
 const anchorPromise = anchor
-  ? NodesModel.exists({ _id: anchor })
+  ? NodesModel.exists({ _id: anchor,  anchor: { $in: [null] }, })
   : Promise.resolve(null);
 
 const [nodeOk, anchorOk] = await Promise.all([
@@ -212,7 +212,7 @@ const groupPromise = groupId
   : Promise.resolve(null);
 
 const anchorPromise = anchor
-  ? LinksModel.exists({ _id: anchor,resourceType:data.resourceType })
+  ? LinksModel.exists({ _id: anchor,resourceType:data.resourceType,  anchor: { $in: [null] },})
   : Promise.resolve(null);
 
 const [nodeOk, groupOk, anchorOk] = await Promise.all([
@@ -264,6 +264,7 @@ if (anchor) {
     return { data: link, success: true };
 
   } catch (e) {
+    console.log(e,"create link error")
     manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);
   }
 };
@@ -522,32 +523,89 @@ LinkNodeService.populateuser ,
 
 ]
 
-static getGroupLinks = async ({ groupId ,user}: any,config?:any) => { 
+// static getGroupLinks = async ({ groupId ,user}: any,config?:any) => { 
+//   try {
+//     const groupObjectId = new Types.ObjectId(groupId);
+//     const userObjectId = new Types.ObjectId(user._id.toString());
+//     console.log(groupObjectId,userObjectId)
+//     const links = await LinksModel.find({
+//       group: groupObjectId,
+//       user: userObjectId
+//     }).populate("anchor jumbotron");
+//     if(config.actionNoGuide){
+
+//       return links;
+//     }
+
+// return links.map((e) => {
+//   if (e.action) {
+//     const { url, text, ...rest } = e.toObject();
+//     return rest;
+//   }
+
+//   return e;
+// });
+//   } catch (e) {
+//     manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR); 
+//   }
+
+// }
+
+static getGroupLinks = async ({ groupId, user, }: any, config?: any) => {
   try {
     const groupObjectId = new Types.ObjectId(groupId);
     const userObjectId = new Types.ObjectId(user._id.toString());
-    console.log(groupObjectId,userObjectId)
+
     const links = await LinksModel.find({
       group: groupObjectId,
       user: userObjectId
-    }).populate("anchor jumbotron");
-    if(config.actionNoGuide){
+    }).populate([
+      "jumbotron",
+      {
+        path: "anchor",
+        populate: [
+          { path: "group", select: "action" },
+          { path: "node", select: "action" }
+        ]
+      }
+    ]);
 
+    if (config.actionNoGuide) {
       return links;
     }
 
-return links.map((e) => {
-  if (e.action) {
-    const { url, text, ...rest } = e.toObject();
-    return rest;
-  }
+    // fetch the group's own action
+    const group = await LinkGroupModel.findOne(
+      { _id: groupObjectId },
+      { action: 1 }
+    ).lean()
 
-  return e;
-});
+    const groupAction = config?.actionNoInlineGroupGuide?false: group?.action ?? null
+
+    return links.map((e) => {
+      const anchorAction = (e.anchor as any)?.action
+      const anchorGroupAction = (e.anchor as any)?.group?.action
+      const anchorNodeAction = (e.anchor as any)?.node?.action
+
+      const shouldStrip = e.action || groupAction || anchorAction || anchorGroupAction || anchorNodeAction
+
+      if (shouldStrip) {
+        const { url, text, ...rest } = e.toObject();
+
+        if (e.anchor) {
+          const { url, text, ...rest_ }: any = (rest as any).anchor
+          ;(rest as any).anchor = rest_
+        }
+
+        return rest;
+      }
+
+      return e;
+    });
+
   } catch (e) {
-    manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR); 
+    manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);
   }
-
 }
 static getNodeLinks2 = async ({ nodeId ,user}: any,config?:any) => { 
   try {
@@ -622,35 +680,74 @@ if (Types.ObjectId.isValid(nodeId)) {
       // user: userObjectId
     }).sort({ createdAt: 1 }); // or -1 for newest first
 
-    const links_ = await LinksModel.find({
-      node: nodeObjectId,
-      // user: userObjectId,
-      $or:[
+    // const links_ = await LinksModel.find({
+    //   node: nodeObjectId,
+    //   // user: userObjectId,
+    //   $or:[
 
         
-      {  isFeatured: false,},
-       { isFeatured: { $exists: false } }
-      ]
+    //   {  isFeatured: false,},
+    //    { isFeatured: { $exists: false } }
+    //   ]
 
       
-    }).populate("anchor jumbotron");
+    // }).populate("anchor jumbotron");
+
+    // 1. Populate anchor deeply — including its group and node
+const links_ = await LinksModel.find({
+  node: nodeObjectId,
+  $or: [
+    { isFeatured: false },
+    { isFeatured: { $exists: false } }
+  ]
+}).populate([
+  { path: "anchor", populate: [{ path: "group" }, { path: "node" }] },
+  "jumbotron"
+]);
 
 let links = links_
-    if(!config?.actionNoGuideLink){
+ if (!config?.actionNoGuideLink) {
+  links = links_.map(e => {
+    const groupAction = groups
+      .find(ee => ee?._id?.toString() === e?.group?.toString())?.action;
 
-      links = links_.map(e=>{
-        let groupAction = groups.find(ee=>ee?._id?.toString() ==e?.group ?.toString())?.action
+    const linkHasAction = e?.action || groupAction;
 
-        if(e?.action || groupAction){
-          let {url,text,...rest} =e.toObject()
+    // ── Rule 1: link (or its group/node) has action ──────────────────
+    if (linkHasAction) {
+      const b = e.toObject();
+      const { url, text, ...rest } = b;
 
-          return rest as any
+      if (e?.anchor) {
+        // also omit anchor url + text
+        const { url: aUrl, text: aText, ...anchorRest } = b?.anchor as any;
+        rest.anchor = anchorRest;
+      }
 
-        }
-        return e
-      })
-
+      return rest as any;
     }
+
+    // ── Rule 2: no action on link, but it has an anchor ──────────────
+    // Check anchor's group and node for actions
+    if (e?.anchor) {
+      const anchor = e.anchor as any; // fully populated via populate above
+      const anchorGroupAction = anchor?.group?.action;
+      const anchorNodeAction  = anchor?.node?.action;
+
+      if (anchorGroupAction || anchorNodeAction) {
+        // omit anchor url + text, but keep link url + text
+        const b = e.toObject();
+        const { url: aUrl, text: aText, ...anchorRest } = b?.anchor as any;
+        return { ...b, anchor: anchorRest } as any;
+      }
+
+      // anchor has no action — return as-is, anchor is already fully populated
+      // (group + node available on frontend for any further checks)
+    }
+
+    return e;
+  });
+}
 
     
     // const featuredLinks = await LinksModel.find({
@@ -1142,7 +1239,7 @@ const groupPromise = groupid
   : Promise.resolve(null);
 
 const anchorPromise = anchor
-  ? LinksModel.exists({ _id: anchor ,resourceType:data.resourceType})
+  ? LinksModel.exists({ _id: anchor ,resourceType:data.resourceType,  anchor: { $in: [null] },})
   : Promise.resolve(null);
 
 const [
@@ -1240,6 +1337,7 @@ static updateNode = async (data: any) => {
         let g = NodesModel.exists({
         //  user: new Types.ObjectId(user._id),
       _id: new Types.ObjectId(validated.node),
+        anchor: { $in: [null,] },
     })
 
       if (!g) {
@@ -1429,6 +1527,8 @@ static searchLinks = async ({ data }: { data: any }) => {
 
     // ✅ Build dynamic filter
     const filter: any = {
+       anchor: { $in: [null] }, 
+       action: { $in: [null] }, 
       // user: new Types.ObjectId(userId),
     };
 // console.log(query)
@@ -1768,33 +1868,98 @@ static searchNode = async ({ data, node: nodeId }: { data: any; node: string }) 
       manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);
     }
   };
-  static getLink = async ({ id }: any,config?:any) => {
-    try {
+
+  static getLink = async ({ id }: any, config?: any) => {
+  try {
+    const link = await LinksModel.findOne({
+      _id: new Types.ObjectId(id),
+    }).populate([
+      {
+        path: "anchor",
+        populate: [
+          { path: "group", select: "action _id" },
+          { path: "node", select: "action _id" },
+        ],
+      },
+      { path: "group", select: "action _id" },
+      { path: "node", select: "action _id" },
+      "jumbotron",
+    ]);
+
+    if (!link) return link;
+
+    if (config?.actionNoGuide) return link;
+
+    const linkHasAction =
+      link?.action ||
+      (link?.node as INodes)?.action ||
+      (link?.group as ILinkGroup)?.action;
+
+    // Rule 1: link/group/node has action — omit link url+text (and anchor url+text if exists)
+    if (linkHasAction) {
+      const b = link.toObject();
+      const { url, text, ...rest } = b;
+
+      if (b.anchor) {
+        const { url: aUrl, text: aText, ...anchorRest } = b.anchor as any;
+        rest.anchor = anchorRest;
+      }
+
+      return rest;
+    }
+
+    // Rule 2: no action on link, but has anchor — check anchor's group/node
+    if (link?.anchor) {
+      const anchor = link.anchor as any;
+      const anchorHasAction = anchor?.group?.action || anchor?.node?.action;
+
+      if (anchorHasAction) {
+        const b = link.toObject();
+        const { url: aUrl, text: aText, ...anchorRest } = b.anchor as any;
+        return { ...b, anchor: anchorRest };
+      }
+    }
+
+    return link;
+  } catch (e) {
+    manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);
+  }
+};
+//   static getLink = async ({ id }: any,config?:any) => {
+//     try {
     
 
-      const link = await LinksModel.findOne({
-        _id: new Types.ObjectId(id),
-        // isFeatured:false
-      }).populate("anchor group node")
-      if(!link){
-        return link
-      }
-if(config?.actionNoGuide){
+//       const link = await LinksModel.findOne({
+//         _id: new Types.ObjectId(id),
+//         // isFeatured:false
+//       }).populate("anchor group node")
+//       if(!link){
+//         return link
+//       }
+// if(config?.actionNoGuide){
 
-  return link
-}
-if(link?.action || (link?.node as INodes)?.action || (link?.group as ILinkGroup)?.action){
+//   return link
+// }
+// if(link?.action || (link?.node as INodes)?.action || (link?.group as ILinkGroup)?.action){
 
-  const {url, text,...rest}  = link.toObject()
-  return rest
-}
+//   // const {url, text,...rest}  = 
+//    let b =link.toObject()
+//        let {url,text,...rest} =b
+//           if(b.anchor){
+//             let {url,text,...rest_}:any = b?.anchor
 
-return link
+//            rest.anchor = rest_
 
-    } catch (e) {
-      manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);
-    }
-  };
+//           }
+//   return rest
+// }
+
+// return link
+
+//     } catch (e) {
+//       manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);
+//     }
+//   };
 static groupsReorder = async ({ groups, node, user }: any) => {
   try {
 
@@ -1933,7 +2098,13 @@ static getLinks = async ({ query, page = 1, user }: { query?: string; page: numb
     }
 
     // 2. Build Filter for General Feed
-    const filter: any = { isPrivate: false, isHidden: false ,isFeatured:false,resourceType:E_RESOURCE_TYPES.URL};
+    const filter: any = { isPrivate: false, isHidden: false ,resourceType:E_RESOURCE_TYPES.URL,
+
+
+       anchor: { $in: [null] }, 
+       action: { $in: [null] }, 
+       isFeatured: { $in: [null,false] }, 
+    };
     if (query) {
       filter.$or = [
         { title: { $regex: query, $options: "i" } },

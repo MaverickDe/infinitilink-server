@@ -371,7 +371,7 @@ static performResouceAction = async (data:any,resourceActionId:string,config:any
 
         let mainResourceId = resouceActionData?.resource?.toString()??"";
         let mainResourceType = resouceActionData?.resourceType;
-        let action = await this.performAction(data,resouceActionData,user);
+       
         let resouceLevel = resouceActionData?.resourceType;
         // console.log("config in performResouceAction",config )
         // console.log("resouceActionData in performResouceAction",resouceActionData)
@@ -399,34 +399,231 @@ static performResouceAction = async (data:any,resourceActionId:string,config:any
         
 
         }
-        if(config?.enforceAnchorResourceId){
+        // if(config?.enforceAnchorResourceId){
+        //   let anchorlevel =config?.anchorResourceLevel
          
-          if(resouceLevel === E_RESOURCE_LEVELS.NODE){
-          let linkisnodechildexist = await NodesModel.exists({ anchor:resouceActionData?.resource,_id:new Types.ObjectId(config.enforceAnchorResourceId)});
-          if(linkisnodechildexist){
-             mainResourceId = config.enforceAnchorResourceId;
-            // mainResourceType = E_RESOURCE_LEVELS.NODE
-            
-          }
-          }
-          if(resouceLevel === E_RESOURCE_LEVELS.LINK){
-          let linkisnodechildexist = await LinksModel.exists({ anchor:resouceActionData?.resource,_id:new Types.ObjectId(config.enforceAnchorResourceId)});
-          if(linkisnodechildexist){
+        //   if(resouceLevel === E_RESOURCE_LEVELS.NODE){
+        //     if(anchorlevel){
+        //       if(anchorlevel==E_RESOURCE_LEVELS.LINK){
+
+        //         let linkisexist = await LinksModel.exists({ anchor.node:resouceActionData?.resource,_id:new Types.ObjectId(config.enforceAnchorResourceId)});
+        //         if(linkisexist){
+        //            mainResourceId = config.enforceAnchorResourceId;
+        //           mainResourceType = E_RESOURCE_LEVELS.LINK
+                  
+        //         }
+        //       }
+
+        //     }else{
+
+        //       let linkisnodechildexist = await NodesModel.exists({ anchor:resouceActionData?.resource,_id:new Types.ObjectId(config.enforceAnchorResourceId)});
+        //       if(linkisnodechildexist){
+        //          mainResourceId = config.enforceAnchorResourceId;
+        //         // mainResourceType = E_RESOURCE_LEVELS.NODE
+                
+        //       }
+        //     }
+        //   }
+        //   if(resouceLevel === E_RESOURCE_LEVELS.LINK){
+        //   let linkisnodechildexist = await LinksModel.exists({ anchor:resouceActionData?.resource,_id:new Types.ObjectId(config.enforceAnchorResourceId)});
+        //   if(linkisnodechildexist){
         
 
-            mainResourceId = config.enforceAnchorResourceId;
-            // mainResourceType = E_RESOURCE_LEVELS.LINK
-          }
-          }
+        //     mainResourceId = config.enforceAnchorResourceId;
+        //     // mainResourceType = E_RESOURCE_LEVELS.LINK
+        //   }
+        //   }
+        //           if(anchorlevel){
+        //       if(anchorlevel==E_RESOURCE_LEVELS.LINK){
+
+        //         let linkisexist = await LinksModel.exists({ anchor.group:resouceActionData?.resource,_id:new Types.ObjectId(config.enforceAnchorResourceId)});
+        //         if(linkisexist){
+        //            mainResourceId = config.enforceAnchorResourceId;
+        //           mainResourceType = E_RESOURCE_LEVELS.LINK
+                  
+        //         }
+        //       }
+
+        //     }
 
        
         
 
+        // }
+
+if (config?.enforceAnchorResourceId) {
+  const anchorLevel = config?.anchorResourceLevel;
+  const enforcedId = new Types.ObjectId(config.enforceAnchorResourceId);
+  const actionResource = resouceActionData?.resource;
+  // console.log("enforceAnchorResourceId", config.enforceAnchorResourceId, "anchorLevel", anchorLevel, "resouceLevel", resouceLevel, actionResource, enforcedId);
+
+  // ── Action lives on a NODE ────────────────────────────────────────
+  if (resouceLevel === E_RESOURCE_LEVELS.NODE) {
+
+    if (anchorLevel === E_RESOURCE_LEVELS.LINK) {
+      // get enforced link's anchor, then check that anchor's node === actionResource
+      const link = await LinksModel.findOne({ _id: enforcedId }).select("anchor").lean();
+      if (link?.anchor) {
+        const exists = await LinksModel.exists({ _id: link.anchor, node: actionResource });
+        if (exists) {
+          mainResourceId   = config.enforceAnchorResourceId;
+          mainResourceType = E_RESOURCE_LEVELS.LINK;
         }
+      }
+
+    } else {
+      // child is a NODE whose anchor === action resource directly
+      const exists = await NodesModel.exists({ _id: enforcedId, anchor: actionResource });
+      if (exists) {
+        mainResourceId = config.enforceAnchorResourceId;
+      }
+    }
+  }
+
+  // ── Action lives on a LINK ────────────────────────────────────────
+  if (resouceLevel === E_RESOURCE_LEVELS.LINK) {
+    // enforced link's anchor === actionResource directly
+    const exists = await LinksModel.exists({ _id: enforcedId, anchor: actionResource });
+    if (exists) {
+      mainResourceId = config.enforceAnchorResourceId;
+    }
+  }
+
+  // ── Action lives on a GROUP ───────────────────────────────────────
+  if (resouceLevel === E_RESOURCE_LEVELS.GROUP) {
+
+    if (anchorLevel === E_RESOURCE_LEVELS.LINK) {
+      // get enforced link's anchor, then check that anchor's group === actionResource
+      const link = await LinksModel.findOne({ _id: enforcedId }).select("anchor").lean();
+      if (link?.anchor) {
+        const exists = await LinksModel.exists({ _id: link.anchor, group: actionResource });
+ 
+        if (exists) {
+          mainResourceId   = config.enforceAnchorResourceId;
+          mainResourceType = E_RESOURCE_LEVELS.LINK;
+        }
+      }
+    }
+  }
+}
 
      
     
-        return await this.getDataForActionResponse(mainResourceId,mainResourceType,{_id:(resouceActionData?.action as IActions)?.user as Types.ObjectId} as any);
+        let v= await this.getDataForActionResponse(mainResourceId,mainResourceType,{_id:(resouceActionData?.action as IActions)?.user as Types.ObjectId} as any);
+
+// now if we were return link we have to check weather the correct action was done
+
+
+// if link has anchor , now we hvae to make sure the action performed was the anchor action, 
+
+// starting with if link?.anchor?.action or link?.anchor?.group?.anchor or link?.anchor?.node?.anchor is the action we are performing action on,
+
+// if no anchor we go with link?.action or link?.group?.action or link?.node?.action is the action we are performing action on,
+if (mainResourceType === E_RESOURCE_LEVELS.LINK) {
+  let link = v.data as ILinks;
+
+  if (link?.anchor) {
+    const anchor = link.anchor as any;
+
+    if (anchor?.action) {
+      if (anchor.action.toString() != resouceActionData._id?.toString()) {
+        throw manageGeneralError(
+          overideObj(ERRORSMG.VALIDATION_ERROR, {
+            message: "Action not valid for this resource - anchor action mismatch .",
+          })
+        );
+      }
+      // ✅ action matched — stop checking
+    } else if (anchor?.group?.action) {
+      if (anchor.group.action.toString() != resouceActionData._id?.toString()) {
+        throw manageGeneralError(
+          overideObj(ERRORSMG.VALIDATION_ERROR, {
+            message: "Action not valid for this resource - anchor group action mismatch ..",
+          })
+        );
+      }
+      // ✅ group action matched — stop checking
+    } else if (anchor?.node?.action) {
+      if (anchor.node.action.toString() != resouceActionData._id?.toString()) {
+        throw manageGeneralError(
+          overideObj(ERRORSMG.VALIDATION_ERROR, {
+            message: "Action not valid for this resource - anchor node action mismatch ...",
+          })
+        );
+      }
+      // ✅ node action matched — stop checking
+    }
+
+  } else {
+    const l = link as any;
+
+    if (l?.action) {
+      if (l.action.toString() != resouceActionData._id?.toString()) {
+        throw manageGeneralError(
+          overideObj(ERRORSMG.VALIDATION_ERROR, {
+            message: "Action not valid for this resource - action mismatch",
+          })
+        );
+      }
+      // ✅ action matched — stop checking
+    } else if (l?.group?.action) {
+      if (l.group.action.toString() != resouceActionData._id?.toString()) {
+        throw manageGeneralError(
+          overideObj(ERRORSMG.VALIDATION_ERROR, {
+            message: "Action not valid for this resource - group action mismatch",
+          })
+        );
+      }
+      // ✅ group action matched — stop checking
+    } else if (l?.node?.action) {
+      if (l.node.action.toString() != resouceActionData._id?.toString()) {
+        throw manageGeneralError(
+          overideObj(ERRORSMG.VALIDATION_ERROR, {
+            message: "Action not valid for this resource - node action mismatch",
+          })
+        );
+      }
+      // ✅ node action matched — stop checking
+    }
+  }
+}
+
+if (mainResourceType === E_RESOURCE_LEVELS.NODE) {
+  let node = v.data?.node as any;
+  let anchor = v.data?.anchorNode as any;
+
+  if (anchor) {
+    if (anchor?.action) {
+      if (anchor.action.toString() != resouceActionData._id?.toString()) {
+        throw manageGeneralError(
+          overideObj(ERRORSMG.VALIDATION_ERROR, {
+            message: "Action not valid for this resource - anchor action mismatch",
+          })
+        );
+      }
+      // ✅ anchor action matched — stop checking
+    } 
+ 
+
+  } else {
+    if (node?.action) {
+      if (node.action.toString() != resouceActionData._id?.toString()) {
+        throw manageGeneralError(
+          overideObj(ERRORSMG.VALIDATION_ERROR, {
+            message: "Action not valid for this resource - node action mismatch",
+          })
+        );
+      }
+      // ✅ node action matched — stop checking
+    }
+  }
+}
+
+
+         let action = await this.performAction(data,resouceActionData,user);
+
+
+         return v
         // if( action?.success)
         // {
         // }
@@ -505,7 +702,7 @@ let data:any = null;
                     groupId: resourceId,
                     user
                     // user: {_id:new Types.ObjectId("69d72a82d4f9030e39d8ab71")} as any
-                },{includeActions:true})    
+                },{includeActions:true,actionNoInlineGroupGuide:true})    
                 // console.log("resourceIdresourceId",resourceId,data)
                 break
             }
