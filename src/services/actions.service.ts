@@ -335,7 +335,32 @@ if (actionData.config.type === "formdata") {
   }));
 
   if (uniqueEntries.length > 0) {
-    await ActionUniqueFieldModel.insertMany(uniqueEntries);
+    try{
+
+      await ActionUniqueFieldModel.insertMany(uniqueEntries);
+    }
+    catch(e:any){
+    //       const field = Object.keys(e.keyValue)[0];
+    // const value = e.keyValue[field];
+
+      // get the key and value that caused the duplicate error from e.keyValue
+      // console.log(e,"error in inserting unique fields",field , value)
+      // console.log(e.originalError,"sdjhsdhshd")
+      // console.log(e.cause,"Ddd")
+      // console.log(,"d")
+      // console.log(e?.message)
+      
+      if (e.code === 11000) {
+      let  field_ =e.errorResponse.writeErrors[0].err.op.field
+      let  value_ =e.errorResponse.writeErrors[0].err.op.value
+        throw manageGeneralError(
+          overideObj(ERRORSMG.VALIDATION_ERROR, {
+            message: `${field_} already exists with value ${value_} for this action`,
+          })
+        );
+      }
+      throw manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);
+    }
   }
 
     const response = await ActionsResponseModel.create({
