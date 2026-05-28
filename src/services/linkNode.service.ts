@@ -58,7 +58,7 @@ export class LinkNodeService {
 const userId = new Types.ObjectId(user?._id?.toString());
 
 const nodePromise = node
-  ? NodesModel.findOne({ user: userId, _id: node })
+  ? NodesModel.findOne({ user: userId, _id: node ,anchor: { $in: [null] }})
   : Promise.resolve(null);
 
 
@@ -204,7 +204,7 @@ try{
 const userId = new Types.ObjectId(user?._id?.toString());
 
 const nodePromise = node
-  ? NodesModel.exists({ user: userId, _id: node })
+  ? NodesModel.exists({ user: userId, _id: node ,anchor: { $in: [null] }})
   : Promise.resolve(null);
 
 const groupPromise = groupId
