@@ -694,6 +694,7 @@ if (Types.ObjectId.isValid(nodeId)) {
     // }).populate("anchor jumbotron");
 
     // 1. Populate anchor deeply — including its group and node
+    console.log(nodeObjectId,"nodeObjectIdnodeObjectId")
 const links_ = await LinksModel.find({
   node: nodeObjectId,
   $or: [
@@ -762,13 +763,14 @@ let links = links_
 
 
 const featuredLinks = await LinksModel.find({
+  
   user: anchorNode?.user || userObjectId,
   isFeatured: true,
 
   $or: [
     // node-level featured links
     {
-      featuredLinkIsNodeLevel: true,
+      featuredLinkIsNodeLevel: false,
       node: nodeObjectId,
     },
 
@@ -780,7 +782,7 @@ const featuredLinks = await LinksModel.find({
     // old docs where field doesn't exist
     {
       featuredLinkIsNodeLevel: { $exists: false },
-    },
+    }
   ],
 });
 
@@ -1508,10 +1510,80 @@ static changeNodeParentNode = async (data: any) => {
   // =========================
   // SEARCH LINKS (paginated)
   // =========================
+// static searchLinks = async ({ data }: { data: any }) => {
+//   try {
+//     const {
+//       // userId,
+//       query,
+//       category,
+//       sort,
+//       page = 1,
+//       limit = 30,
+//     } = await validateInput({
+//       input: data,
+//       schema: searchLinkValidator,
+//       async: true,
+//     });
+
+//     const skip = (page - 1) * limit;
+
+//     // ✅ Build dynamic filter
+//     const filter: any = {
+//        anchor: { $in: [null] }, 
+//        action: { $in: [null] }, 
+//       // user: new Types.ObjectId(userId),
+//     };
+// // console.log(query)
+//     if (query) {
+//       filter.$text = { $search: query };
+//     }
+
+//     if (category) {
+//       filter.category = category;
+//     }
+
+//     // ✅ Build sort
+//     let sortOption: any = {};
+
+//     if (query) {
+//       // prioritize relevance if searching
+//       sortOption.score = { $meta: "textScore" };
+//     }
+
+//     if (sort === "latest") {
+//       sortOption.createdAt = -1;
+//     }
+
+//     if (sort === "oldest") {
+//       sortOption.createdAt = 1;
+//     }
+
+//     // default fallback
+//     if (!sort && !query) {
+//       sortOption.createdAt = -1;
+//     }
+
+//     const results = await LinksModel.find(filter)
+//       .skip(skip)
+//       .limit(limit + 1)
+//       .sort(sortOption);
+
+
+
+
+//     return {
+//       data: results.slice(0, limit), // remove extra item
+//       nextPage:page+1,
+//       page,
+//       hasMore : results.length>limit
+//     };
+//   } catch (e) {
+//     manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);
+//   }
+// };
 static searchLinks = async ({ data }: { data: any }) => {
   try {
     const {
-      // userId,
       query,
       category,
       sort,
@@ -1525,55 +1597,92 @@ static searchLinks = async ({ data }: { data: any }) => {
 
     const skip = (page - 1) * limit;
 
-    // ✅ Build dynamic filter
-    const filter: any = {
-       anchor: { $in: [null] }, 
-       action: { $in: [null] }, 
-      // user: new Types.ObjectId(userId),
+    // 1️⃣ Base match
+    const matchStage: any = {
+      anchor: { $in: [null] },
+      action: { $in: [null] },
+         isPrivate: false,
+      isHidden: false,
+      resourceType: E_RESOURCE_TYPES.URL,
+      isFeatured: { $in: [null, false] },
+      
     };
-// console.log(query)
-    if (query) {
-      filter.$text = { $search: query };
-    }
 
-    if (category) {
-      filter.category = category;
-    }
+    if (query) matchStage.$text = { $search: query };
+    if (category) matchStage.category = category;
 
-    // ✅ Build sort
-    let sortOption: any = {};
+    // 2️⃣ Sort
+    const sortStage: any = {};
+    if (query) sortStage.score = { $meta: "textScore" };
+    if (sort === "latest") sortStage.createdAt = -1;
+    if (sort === "oldest") sortStage.createdAt = 1;
+    if (!sort && !query) sortStage.createdAt = -1;
 
-    if (query) {
-      // prioritize relevance if searching
-      sortOption.score = { $meta: "textScore" };
-    }
+    // 3️⃣ Pipeline
+    const results = await LinksModel.aggregate([
+      { $match: matchStage },
+      ...(Object.keys(sortStage).length ? [{ $sort: sortStage }] : []),
 
-    if (sort === "latest") {
-      sortOption.createdAt = -1;
-    }
+      // Lookup node
+      {
+        $lookup: {
+          from: "nodes",
+          localField: "node",
+          foreignField: "_id",
+          as: "_nodeData",
+        },
+      },
 
-    if (sort === "oldest") {
-      sortOption.createdAt = 1;
-    }
+      // Lookup group
+      {
+        $lookup: {
+          from: "groups",
+          localField: "group",
+          foreignField: "_id",
+          as: "_groupData",
+        },
+      },
 
-    // default fallback
-    if (!sort && !query) {
-      sortOption.createdAt = -1;
-    }
+      // Filter out links where node or group has anchor/action
+   {
+  $match: {
+    $and: [
+      {
+        $or: [
+          { "_nodeData.0": { $exists: false } },           // no node at all
+          { "_nodeData.0.anchor": { $in: [null, false] } }, // node exists, no anchor
+          { "_nodeData.0.action": { $in: [null, false] } }, // node exists, no action
+        ],
+      },
+      {
+        $or: [
+          { "_groupData.0": { $exists: false } },            // no group at all
+          { "_groupData.0.anchor": { $in: [null, false] } }, // group exists, no anchor
+          { "_groupData.0.action": { $in: [null, false] } }, // group exists, no action
+        ],
+      },
+    ],
+  },
+},
 
-    const results = await LinksModel.find(filter)
-      .skip(skip)
-      .limit(limit + 1)
-      .sort(sortOption);
+      // Reshape back to objects
+      {
+        $addFields: {
+          node: { $arrayElemAt: ["$_nodeData", 0] },
+          group: { $arrayElemAt: ["$_groupData", 0] },
+        },
+      },
+      { $unset: ["_nodeData", "_groupData"] },
 
-
-
+      { $skip: skip },
+      { $limit: limit + 1 },
+    ]);
 
     return {
-      data: results.slice(0, limit), // remove extra item
-      nextPage:page+1,
+      data: results.slice(0, limit),
+      nextPage: page + 1,
       page,
-      hasMore : results.length>limit
+      hasMore: results.length > limit,
     };
   } catch (e) {
     manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);
@@ -2081,61 +2190,192 @@ static linksReorder = async ({ group, node, user, links }: any) => {
 // =========================
 // GET GLOBAL LINKS (Discovery)
 // =========================
+// static getLinks = async ({ query, page = 1, user }: { query?: string; page: number; user?: IUser }) => {
+//   try {
+//     const limit = 20;
+//     const skip = (page - 1) * limit;
+
+//     // 1. Fetch Special/Featured Links (Top 6 by likes + clicks + views)
+//     let specialLinks = { data: [], hasMore: false, nextPage: null };
+//     if (page === 1) {
+//       const featured = await LinksModel.find({ isPrivate: false, isHidden: false })
+//         .sort({ likes: -1, clicks: -1, views: -1 })
+//         .limit(15)
+//         .populate(this.populateuser);
+      
+//       specialLinks.data = featured as any;
+//     }
+
+//     // 2. Build Filter for General Feed
+//     const filter: any = { isPrivate: false, isHidden: false ,resourceType:E_RESOURCE_TYPES.URL,
+
+
+//        anchor: { $in: [null] }, 
+//        action: { $in: [null] }, 
+//        isFeatured: { $in: [null,false] }, 
+//     };
+//     if (query) {
+//       filter.$or = [
+//         { title: { $regex: query, $options: "i" } },
+//         { description: { $regex: query, $options: "i" } },
+//         { url: { $regex: query, $options: "i" } }
+//       ];
+//     }
+
+//     // 3. Fetch Feed Links
+//     const links = await LinksModel.find(filter)
+//       .sort({ createdAt: -1 }) // Latest stuff first
+//       .skip(skip)
+//       .limit(limit + 1)
+//       .populate(this.populateuser);
+
+//     const hasMore = links.length > limit;
+//     const data = hasMore ? links.slice(0, limit) : links;
+
+//     return {
+//       specialLinks:{
+//         data:data,
+//         page,
+//         nextPage: hasMore ? page + 1 : null,
+//         hasMore:false
+//       },
+//       links: {
+//         data,
+//         page,
+//         nextPage: hasMore ? page + 1 : null,
+//         hasMore
+//       }
+//     };
+//   } catch (e) {
+//     manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);
+//   }
+// };
+
 static getLinks = async ({ query, page = 1, user }: { query?: string; page: number; user?: IUser }) => {
   try {
     const limit = 20;
     const skip = (page - 1) * limit;
 
-    // 1. Fetch Special/Featured Links (Top 6 by likes + clicks + views)
-    let specialLinks = { data: [], hasMore: false, nextPage: null };
-    if (page === 1) {
-      const featured = await LinksModel.find({ isPrivate: false, isHidden: false })
-        .sort({ likes: -1, clicks: -1, views: -1 })
-        .limit(15)
-        .populate(this.populateuser);
-      
-      specialLinks.data = featured as any;
-    }
-
-    // 2. Build Filter for General Feed
-    const filter: any = { isPrivate: false, isHidden: false ,resourceType:E_RESOURCE_TYPES.URL,
-
-
-       anchor: { $in: [null] }, 
-       action: { $in: [null] }, 
-       isFeatured: { $in: [null,false] }, 
+    // 1️⃣ Build base match
+    const matchStage: any = {
+      isPrivate: false,
+      isHidden: false,
+      resourceType: E_RESOURCE_TYPES.URL,
+      isFeatured: { $in: [null, false] },
+      anchor: { $in: [null] },
+      action: { $in: [null] },
     };
+
     if (query) {
-      filter.$or = [
+      matchStage.$or = [
         { title: { $regex: query, $options: "i" } },
         { description: { $regex: query, $options: "i" } },
-        { url: { $regex: query, $options: "i" } }
+        { url: { $regex: query, $options: "i" } },
       ];
     }
 
-    // 3. Fetch Feed Links
-    const links = await LinksModel.find(filter)
-      .sort({ createdAt: -1 }) // Latest stuff first
-      .skip(skip)
-      .limit(limit + 1)
-      .populate(this.populateuser);
+    // 2️⃣ Shared pipeline (reused for both specialLinks and feed)
+    const sharedPipeline: any[] = [
+      { $match: matchStage },
+
+      // Lookup node
+      {
+        $lookup: {
+          from: "nodes", // ✅ replace with your actual collection name
+          localField: "node",
+          foreignField: "_id",
+          as: "_nodeData",
+        },
+      },
+
+      // Lookup group
+      {
+        $lookup: {
+          from: "groups", // ✅ replace with your actual collection name
+          localField: "group",
+          foreignField: "_id",
+          as: "_groupData",
+        },
+      },
+
+      // Filter out links where node.anchor, node.action, group.anchor, or group.action is truthy
+      // {
+      //   $match: {
+      //     "_nodeData.0.anchor": { $in: [null, undefined] },
+      //     "_nodeData.0.action": { $in: [null, undefined] },
+      //     "_groupData.0.anchor": { $in: [null, undefined] },
+      //     "_groupData.0.action": { $in: [null, undefined] },
+      //   },
+      // },
+
+      {
+  $match: {
+    $and: [
+      {
+        $or: [
+          { "_nodeData.0": { $exists: false } },           // no node at all
+          { "_nodeData.0.anchor": { $in: [null, false] } }, // node exists, no anchor
+          { "_nodeData.0.action": { $in: [null, false] } }, // node exists, no action
+        ],
+      },
+      {
+        $or: [
+          { "_groupData.0": { $exists: false } },            // no group at all
+          { "_groupData.0.anchor": { $in: [null, false] } }, // group exists, no anchor
+          { "_groupData.0.action": { $in: [null, false] } }, // group exists, no action
+        ],
+      },
+    ],
+  },
+},
+
+      // Collapse back to single objects
+      {
+        $addFields: {
+          node: { $arrayElemAt: ["$_nodeData", 0] },
+          group: { $arrayElemAt: ["$_groupData", 0] },
+        },
+      },
+      { $unset: ["_nodeData", "_groupData"] },
+
+    ];
+
+    // 3️⃣ Special/Featured links (page 1 only)
+    let specialLinks = { data: [], hasMore: false, nextPage: null };
+    if (page === 1) {
+      const featured = await LinksModel.aggregate([
+        ...sharedPipeline,
+        { $sort: { likes: -1, clicks: -1, views: -1 } },
+        { $limit: 15 },
+      ]);
+
+      specialLinks.data = featured as any;
+    }
+
+    // 4️⃣ Feed links
+    const links = await LinksModel.aggregate([
+      ...sharedPipeline,
+      { $sort: { createdAt: -1 } },
+      { $skip: skip },
+      { $limit: limit + 1 },
+    ]);
 
     const hasMore = links.length > limit;
     const data = hasMore ? links.slice(0, limit) : links;
 
     return {
-      specialLinks:{
-        data:data,
+      specialLinks: {
+        data: specialLinks.data,
         page,
-        nextPage: hasMore ? page + 1 : null,
-        hasMore:false
+        nextPage: null,
+        hasMore: false,
       },
       links: {
         data,
         page,
         nextPage: hasMore ? page + 1 : null,
-        hasMore
-      }
+        hasMore,
+      },
     };
   } catch (e) {
     manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);

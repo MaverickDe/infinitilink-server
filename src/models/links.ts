@@ -143,7 +143,7 @@ export let LinksGenericObj =  {
     featuredLinkIsNodeLevel: { 
       type: Boolean, 
       required: false, 
-      default: true 
+      default: false 
     },   
     isPrivate: { 
       type: Boolean, 
