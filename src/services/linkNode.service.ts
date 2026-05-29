@@ -770,7 +770,7 @@ const featuredLinks = await LinksModel.find({
   $or: [
     // node-level featured links
     {
-      featuredLinkIsNodeLevel: false,
+      featuredLinkIsNodeLevel: true,
       node: nodeObjectId,
     },
 
