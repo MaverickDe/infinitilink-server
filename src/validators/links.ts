@@ -66,7 +66,7 @@ export const createLinkValidator = z
 isFeatured: z.boolean().optional().nullable(),
     isAnchor: z.boolean().optional().default(false),
     anchor: objectId.optional(),
-
+  featuredLinkIsNodeLevel: z.boolean().optional().nullable(),
     description: z.string().optional().default(""),
     category: z.enum(convertEnumToList(E_LINK_CATEGORIES)).optional(),
     linkDomainType: z.enum(convertEnumToList(E_LINK_DOMAIN_TYPE)).optional().default(E_LINK_DOMAIN_TYPE.other),
