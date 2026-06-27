@@ -23,6 +23,7 @@ export class AuthRoutes {
     // this.router.post("/thirdpartysignup", this.authController.thirdPartySignup.bind(this.authController))
     // this.router.post("/thirdpartylogin", this.authController.thirdPartyLogin.bind(this.authController))
     this.router.post("/signup", this.authController.signup.bind(this.authController))
+    this.router.post("/signuptest", this.authController.signupUserTest.bind(this.authController))
     this.router.get("/logout", this.authController.logout.bind(this.authController))
     this.router.post("/verify-email", this.authController.verifyEmail.bind(this.authController))
     // this.router.post("/verify-bvn", this.authController.verifyEmail.bind(this.authController))

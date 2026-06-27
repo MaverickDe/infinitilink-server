@@ -276,6 +276,46 @@ async google(req: Request, res: Response){
       // })
     }
   }
+  async signupUserTest(req: Request, res: Response) {
+    try {
+      const { email, password, lastname, firstname } = req.body
+      const {ref} = req.query as any
+
+      // Validate request
+      if (!email || !password || !lastname || !firstname) {
+        return res.status(400).json({
+          status: "error",
+          message: "All fields are required",
+        })
+      }
+
+      // Register user
+      const data = await AuthService.signupUserTest({ email, password, lastname, firstname,ref })
+
+      return res.json({
+        status: "success",
+        ...(data??{}),
+      })
+    } catch (e: any) {
+
+            return manageReturnedError({
+              error: e,
+              overideError: 
+              overideObj(
+
+                ERRORSMG.SOMETHING_WENT_WRONG_ERROR,{
+                  message:"Registration failed"
+                }
+              ),
+              res
+            });
+      // console.error("Signup error:", e)
+      // return res.status(400).json({
+      //   status: "error",
+      //   message: e.message || "Registration failed",
+      // })
+    }
+  }
   @UseMiddleware(authenticate)
   async logout(req: Request, res: Response) {
     try {

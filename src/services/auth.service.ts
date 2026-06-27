@@ -713,6 +713,114 @@ await mailer.sendVerificationEmail(email);
     session.endSession();
   }
 };
+static signupUserTest = async (data: {
+  email: string;
+  password: string;
+  firstname: string;
+  lastname: string;
+  ref?: string | null;
+}) => {
+  const session = await mongoose.startSession();
+
+  try {
+  
+    await validateInput({schema:registerSchema,input:data})
+ 
+    let response;
+
+    await session.withTransaction(async () => {
+      const { email, password, firstname, lastname, ref } = data;
+
+      const existingUser = await User.findOne({ email }).session(session);
+      if (existingUser) {
+        throw new Error("User already exists");
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 12);
+
+      const newUser = new User({
+        email,
+  
+        password: hashedPassword,
+        type: "email",
+        emailIsVerified:true,
+        biodatafilled:true,
+        username: generateUsername(firstname),
+        lastname,
+        firstname,
+        ...(ref ? { invitee: new Types.ObjectId(ref) } : {}),
+      });
+
+     
+
+  const [node] = await NodesModel.create([{
+      
+        user: new Types.ObjectId(newUser?._id?.toString()),
+  // _id: new Types.ObjectId(newUser?._id?.toString()),
+  isMain:true,
+  title:"main",
+  description:"the default node of the user",
+  path:"/"
+      }],{session});
+
+  if(node){
+
+        node.path = buildPath(null, node._id);
+    await node.save({session});
+      }
+      newUser.rootnode =node._id as Types.ObjectId;
+
+       await newUser.save({ session });
+
+      if (ref) {
+        await Ref.findOneAndUpdate(
+          { user: new Types.ObjectId(ref) },
+          {
+            $set: { user: new Types.ObjectId(ref) },
+            $inc: { credit: 10, totalInvitees: 1 },
+          },
+          { upsert: true, returnDocument: "after", session }
+        );
+
+        await Ref.findOneAndUpdate(
+          { user: newUser._id },
+          {
+            $set: { user: newUser._id },
+            $inc: { credit: 5, totalInvitees: 1 },
+          },
+          { upsert: true, returnDocument: "after", session }
+        );
+      }
+
+// await mailer.sendVerificationEmail(email);
+
+
+      const token = this.generateToken({
+        userId: newUser._id.toString(),
+      });
+
+      response = {
+        success: true,
+        message: "User created successfully. Please verify your email.",
+        token,
+        user: _.pick(
+          { ...newUser.toObject(), secretPhrase: !!newUser.secretPhrase },
+          userpick
+        ),
+      };
+    });
+
+    return response;
+  } catch (err: any) {
+    // console.error(err);
+    // throw new Error(err.message || "Server error");
+
+     manageGeneralError(err, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);
+  } finally {
+    session.endSession();
+  }
+};
+
 
 
 static handleGetAuthEncryptionKey = async (userId: string="") => {
