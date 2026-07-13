@@ -799,6 +799,8 @@ applyToDescendants?:boolean
     );
   } 
 
+  console.log(actionId,"Acriiiiii",action)
+
   const existing = await ResouceActionModel.findOne({
   resource: resourceId,
     //  isDeleted: false,
@@ -851,7 +853,7 @@ let uniqueGroupId = new mongoose.Types.ObjectId();
         filter: {
           resource: descendantId,
                 user: new Types.ObjectId(user?._id?.toString()),
-          // action: action._id,
+          action: action._id,
             //  isDeleted: false,
           
           resourceType: E_RESOURCE_LEVELS.NODE,
@@ -908,7 +910,7 @@ let uniqueGroupId = new mongoose.Types.ObjectId();
       resource: node._id,
       // isDeleted: false,
             user: new Types.ObjectId(user?._id?.toString()),
-      // action: action._id,
+      action: action._id,
       resourceType: E_RESOURCE_LEVELS.NODE,
     },
     {
@@ -952,7 +954,7 @@ return resource; // same shape regardless of which branch ran
         resource: link._id,
           //  isDeleted: false,
               user: new Types.ObjectId(user?._id?.toString()),
-        // action: action._id,
+        action: action._id,
         resourceType: E_RESOURCE_LEVELS.LINK,
       },
       {
@@ -994,7 +996,7 @@ return resource; // same shape regardless of which branch ran
         resource: linkGroup._id,
           //  isDeleted: false,
               user: new Types.ObjectId(user?._id?.toString()),
-        // action: action._id,
+        action: action._id,
         resourceType: E_RESOURCE_LEVELS.GROUP,
       },
       {

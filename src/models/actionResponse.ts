@@ -95,7 +95,7 @@ const ActionUniqueFieldSchema = new Schema<IActionUniqueField>(
  uniqueGroupId: { type: Schema.Types.ObjectId },
     field: { type: String, required: true },
 
-    value: { type: String, required: true },
+    value: { type: mongoose.Schema.Types.Mixed, required: true },
 
     compositeKey: { type: String, required: true, unique: true },
   },

@@ -126,6 +126,12 @@ export const FieldTypeCapabilities = {
     canBeUnique: false,
     canRequireVerification: false,
   },
+  select: {
+    // list: ,
+       canBeUnique: false,
+    canRequireVerification: false,
+  
+  },
 } as const;
 
 
@@ -188,6 +194,7 @@ export type ActionConfig =
   phone = "phone",
   date = "date",
   datetime = "datetime",
+  select = "select",
 }
 
 
@@ -266,6 +273,8 @@ const formFieldZod = z.object({
   name: z.string().min(1),
   type: z.enum(convertEnumToList(E_FormInputType)),
 
+  options: z.array(z.string()).optional().default([]),
+  isMultiple: z.boolean().optional().default(false),
   isOptional: z.boolean().optional().default(false),
   isUnique: z.boolean().optional().default(false)   ,
 }).superRefine((field, ctx) => {
