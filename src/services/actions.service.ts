@@ -1955,7 +1955,7 @@ static deleteActionResponses = async (
 
     const ownedResourceActionIds = new Set(
       resouceActions
-        .filter((ra) => (ra.action as any)?.user?.toString() === user?._id?.toString())
+        .filter((ra) => (ra.action as IActions)?.user?.toString() === user?._id?.toString())
         .map((ra) => ra._id.toString())
     );
 

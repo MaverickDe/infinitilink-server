@@ -137,6 +137,7 @@ export const FieldTypeCapabilities = {
 
 export interface IActions extends Document {
   name: string;
+  _id: Types.ObjectId;
   description?: string;
 
   user?: Types.ObjectId;
@@ -151,6 +152,7 @@ export interface IResouceAction extends Document {
  
 
   resource?: Types.ObjectId;
+  _id: Types.ObjectId;
   action?: Types.ObjectId |IActions;
     user?: Types.ObjectId;
     uniqueGroupId?: Types.ObjectId;
