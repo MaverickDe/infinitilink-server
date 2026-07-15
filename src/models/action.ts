@@ -93,7 +93,7 @@ export enum E_RESOURCE_LEVELS{
 
 export const FieldTypeCapabilities = {
   text: {
-    canBeUnique: false,
+    canBeUnique: true,
     canRequireVerification: false,
   },
 
@@ -141,7 +141,7 @@ export interface IActions extends Document {
 
   user?: Types.ObjectId;
 
-
+    isDeleted?: boolean;
 
   actionType: E_ActionTypes;
 
@@ -229,7 +229,11 @@ const ActionsSchema = new Schema<IActions>(
     name: { type: String, required: true },
 
     description: { type: String },
-
+    isDeleted: { 
+      type: Boolean, 
+      required: false, 
+      default: false 
+    }, 
     actionType: {
       type: String,
       enum: convertEnumToList(E_ActionTypes),
@@ -290,7 +294,35 @@ const formFieldZod = z.object({
 });
 
 // ?
+export const updateActionZod = z.object({
+  name: z.string().min(1).optional(),
+  description: z.string().optional(),
 
+  config: z.discriminatedUnion("type", [
+    z.object({
+      type: z.literal(E_ActionTypes.password),
+      password: z.string().min(1).optional(), // omitted/blank => keep existing password
+    }),
+
+    z.object({
+      type: z.literal(E_ActionTypes.formdata),
+      fields: z.array(formFieldZod).min(1),
+    }),
+
+    z.object({
+      type: z.literal(E_ActionTypes.geo),
+      radius: z.number().positive(),
+    }),
+
+    z.object({
+      type: z.literal(E_ActionTypes.request),
+      endpoint: z.string().url(),
+    }),
+  ]).optional(),
+}).refine(
+  (data) => data.name !== undefined || data.description !== undefined || data.config !== undefined,
+  { message: "At least one field (name, description, or config) must be provided" }
+);
 export const createActionZod = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
@@ -361,7 +393,14 @@ export function validateActionSchema(
         break;
 
       case "number":
-        schema = z.number();
+        // schema = z.number();
+          // schema = z.coerce.number();
+        schema=  z.preprocess(
+  (value) => value === "" ? undefined : value,
+  
+ field.isOptional?z.coerce.number().optional(): z.coerce.number()
+  //  z.coerce.number().optional()
+);
         break;
 
       case "boolean":

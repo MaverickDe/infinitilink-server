@@ -18,6 +18,7 @@ export class Actionroute{
 
   initializeRoutes() {
     this.router.post("/create", this.actionController.createAction.bind(this.actionController))
+    this.router.patch("/update", this.actionController.updateAction.bind(this.actionController))
     this.router.delete("/", this.actionController.deleteAction.bind(this.actionController))
     this.router.get("/all", this.actionController.getUserActions.bind(this.actionController))
     this.router.get("/resource-action", this.actionController.getResourceAction.bind(this.actionController))
@@ -25,6 +26,7 @@ export class Actionroute{
     this.router.post("/resource-perform", this.actionController.performResouceAction.bind(this.actionController))
     this.router.get("/resource-data", this.actionController.getResouceActionResponses.bind(this.actionController))
     this.router.delete("/resource", this.actionController.removeActionFromResource.bind(this.actionController))
+    this.router.post("/responses/delete", this.actionController.deleteActionResponses.bind(this.actionController))
    
    
   }

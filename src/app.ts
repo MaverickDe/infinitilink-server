@@ -94,13 +94,14 @@ const allowedOrigins = [
   "https://infinitilink.vercel.app",
   "http://localhost:3000", // other dev URLs
   "http://172.20.10.3:3000", // other dev URLs
+  "http://192.168.0.132:3000", // other dev URLs
   DOMAIN,
 ];
 app.use(
   cors(
     {
     origin: allowedOrigins,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS","PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   }

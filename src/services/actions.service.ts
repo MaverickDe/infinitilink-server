@@ -8,7 +8,7 @@ import { E_RESOURCE_TYPES, ILinks, LinksModel } from "../models/links";
 import { NodesModel, NodesModelName } from "../models/node";
 
 
-import { ActionsModel, createActionZod, E_RESOURCE_LEVELS, IActions, ResouceActionModel, validateActionSchema } from "../models/action";
+import { ActionsModel, createActionZod, E_RESOURCE_LEVELS, IActions, ResouceActionModel, updateActionZod, validateActionSchema } from "../models/action";
 import { ActionsResponseModel, ActionUniqueFieldModel } from "../models/actionResponse";
 import { IUser, User } from "../models/user";
 import { E_ActionTypes } from "../enums";
@@ -666,33 +666,141 @@ if (mainResourceType === E_RESOURCE_LEVELS.NODE) {
 
 }
 
+// static getResouceActionResponses = async ({
+//   id:resourceActionId,
+//   page = 1,
+//   user,
+//   resourceType
+// }:{id:string,page?:number,user:IUser,resourceType:String}) => {
+//   try {
+//     const limit = 100;
+
+//     page = Math.max(Number(page) || 1, 1);
+
+//     const offset = (page - 1) * limit;
+
+//     const data = await ActionsResponseModel.find({
+//       resourceAction: new Types.ObjectId(resourceActionId),
+//       // user: new Types.ObjectId(user?._id?.toString()),
+//       // resourceType
+//     })
+//       .skip(offset)
+//       .limit(limit);
+
+//     return {
+//       data,
+//       nextPage: page + 1,
+//       page,
+//       hasMore: data.length === limit,
+//     };
+//   } catch (e) {
+//     throw e;
+//   }
+// };
+
+
+
+// actions.service.ts
 static getResouceActionResponses = async ({
-  id:resourceActionId,
+  id: resourceActionId,
   page = 1,
   user,
-  resourceType
-}:{id:string,page?:number,user:IUser,resourceType:String}) => {
+  search,
+  filters, // Record<string, string | string[] | undefined>
+}: { id: string; page?: number; user: IUser; search?: string; filters?: Record<string, any> }) => {
   try {
-    const limit = 100;
-
+    const limit = 30;
     page = Math.max(Number(page) || 1, 1);
-
     const offset = (page - 1) * limit;
 
-    const data = await ActionsResponseModel.find({
+    const baseMatch: any = {
       resourceAction: new Types.ObjectId(resourceActionId),
-      // user: new Types.ObjectId(user?._id?.toString()),
-      // resourceType
-    })
-      .skip(offset)
-      .limit(limit);
-
-    return {
-      data,
-      nextPage: page + 1,
-      page,
-      hasMore: data.length === limit,
+      isDeleted: { $ne: true },
     };
+
+    const hasSearch = !!search?.trim();
+    const cleanFilters = Object.fromEntries(
+      Object.entries(filters ?? {}).filter(([, v]) =>
+        v !== undefined && v !== null && v !== "" && !(Array.isArray(v) && v.length === 0)
+      )
+    );
+    const hasFilters = Object.keys(cleanFilters).length > 0;
+
+    if (!hasSearch && !hasFilters) {
+      const [data, total] = await Promise.all([
+        ActionsResponseModel.find(baseMatch).sort({ createdAt: -1 }).skip(offset).limit(limit),
+        ActionsResponseModel.countDocuments(baseMatch),
+      ]);
+      return { data, nextPage: page + 1, page, hasMore: offset + data.length < total, total };
+    }
+
+    const resouceAction = await ResouceActionModel.findById(resourceActionId).populate("action");
+    const actionFields: any[] = (resouceAction?.action as any)?.config?.fields ?? [];
+    const fieldMap = new Map(actionFields.map((f: any) => [f.name, f]));
+
+    const andConditions: any[] = [];
+
+    if (hasSearch) {
+      const fieldNames = actionFields.map((f) => f.name);
+      if (fieldNames.length > 0) {
+        andConditions.push({
+          $or: fieldNames.map((f) => ({
+            $regexMatch: {
+              input: { $toString: { $ifNull: [`$responsePayload.${f}`, ""] } },
+              regex: search!.trim(),
+              options: "i",
+            },
+          })),
+        });
+      }
+    }
+
+    for (const [fname, fval] of Object.entries(cleanFilters)) {
+      const fieldDef = fieldMap.get(fname);
+      const path = `$responsePayload.${fname}`;
+
+      if (fieldDef?.type === "select") {
+        const selected = Array.isArray(fval) ? fval : [fval];
+        andConditions.push({
+          $gt: [
+            {
+              $size: {
+                $setIntersection: [
+                  { $cond: [{ $isArray: path }, path, [{ $ifNull: [path, "__none__"] }]] },
+                  selected,
+                ],
+              },
+            },
+            0,
+          ],
+        });
+      } else if (fieldDef?.type === "boolean") {
+        andConditions.push({
+          $eq: [{ $ifNull: [path, false] }, fval === "true" || fval === true],
+        });
+      } else {
+        andConditions.push({
+          $regexMatch: {
+            input: { $toString: { $ifNull: [path, ""] } },
+            regex: String(fval),
+            options: "i",
+          },
+        });
+      }
+    }
+
+    const pipeline: any[] = [
+      { $match: baseMatch },
+      ...(andConditions.length > 0 ? [{ $match: { $expr: { $and: andConditions } } }] : []),
+      { $sort: { createdAt: -1 } },
+      { $facet: { data: [{ $skip: offset }, { $limit: limit }], total: [{ $count: "count" }] } },
+    ];
+
+    const [result] = await ActionsResponseModel.aggregate(pipeline);
+    const data = result?.data ?? [];
+    const total = result?.total?.[0]?.count ?? 0;
+
+    return { data, nextPage: page + 1, page, hasMore: offset + data.length < total, total };
   } catch (e) {
     throw e;
   }
@@ -1607,10 +1715,295 @@ return { success: true };
 
 
 
+// static updateAction = async (
+//   actionId: string,
+//   data: { name?: string; description?: string; config?: any },
+//   user: IUser
+// ) => {
+//   try {
+//     if (!mongoose.Types.ObjectId.isValid(actionId)) {
+//       throw manageGeneralError(
+//         overideObj(ERRORSMG.VALIDATION_ERROR, { message: "Invalid action id" })
+//       );
+//     }
+
+//     const action = await ActionsModel.findOne({
+//       _id: new Types.ObjectId(actionId),
+//       user: new Types.ObjectId(user?._id?.toString()),
+//     });
+
+//     if (!action) {
+//       throw manageGeneralError(
+//         overideObj(ERRORSMG.VALIDATION_ERROR, { message: "Action not found" })
+//       );
+//     }
+
+//     // ── actionType is immutable on edit — delete + recreate if it must change ──
+//     if ((data as any).actionType && (data as any).actionType !== action.actionType) {
+//       throw manageGeneralError(
+//         overideObj(ERRORSMG.VALIDATION_ERROR, {
+//           message: "Action type cannot be changed. Delete and recreate this action instead.",
+//         })
+//       );
+//     }
+
+//     const update: any = {};
+//     if (data.name !== undefined) update.name = data.name;
+//     if (data.description !== undefined) update.description = data.description;
+
+//     switch (action.actionType) {
+//       case E_ActionTypes.password: {
+//         if (data.config?.password) {
+//           update["config.passwordHash"] = data.config.password; // ideally hash
+//         }
+//         break;
+//       }
+
+//       case E_ActionTypes.formdata: {
+//         if (data.config?.fields) {
+//           const oldFields: any[] = (action.config as any)?.fields ?? [];
+//           const newFields: any[] = data.config.fields;
+
+//           // find unique fields that vanished or got renamed
+//           const newNames = new Set(newFields.map((f: any) => f.name));
+//           const droppedUniqueNames = oldFields
+//             .filter((f: any) => f.isUnique && !newNames.has(f.name))
+//             .map((f: any) => f.name);
+
+//           if (droppedUniqueNames.length > 0) {
+//             const relatedResourceActions = await ResouceActionModel.find(
+//               { action: action._id },
+//               { _id: 1 }
+//             ).lean();
+//             const ids = relatedResourceActions.map(r => r._id);
+
+//             if (ids.length > 0) {
+//               await ActionUniqueFieldModel.deleteMany({
+//                 action: { $in: ids },
+//                 field: { $in: droppedUniqueNames },
+//               });
+//             }
+//           }
+
+//           update["config.fields"] = newFields;
+//         }
+//         break;
+//       }
+
+//       case E_ActionTypes.geo:
+//       case E_ActionTypes.request: {
+//         throw manageGeneralError(
+//           overideObj(ERRORSMG.VALIDATION_ERROR, {
+//             message: `${action.actionType} action editing is not implemented yet`,
+//           })
+//         );
+//       }
+
+//       default: {
+//         throw manageGeneralError(
+//           overideObj(ERRORSMG.VALIDATION_ERROR, { message: "Invalid action type" })
+//         );
+//       }
+//     }
+
+//     const updated = await ActionsModel.findByIdAndUpdate(
+//       action._id,
+//       { $set: update },
+//       { new: true }
+//     );
+
+//     return updated;
+//   } catch (e) {
+//     manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);
+//   }
+// };
+
+
+static updateAction = async (
+  actionId: string,
+  data: { name?: string; description?: string; config?: any },
+  user: IUser
+) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(actionId)) {
+      throw manageGeneralError(
+        overideObj(ERRORSMG.VALIDATION_ERROR, { message: "Invalid action id" })
+      );
+    }
+
+    const action = await ActionsModel.findOne({
+      _id: new Types.ObjectId(actionId),
+      user: new Types.ObjectId(user?._id?.toString()),
+    });
+
+    if (!action) {
+      throw manageGeneralError(
+        overideObj(ERRORSMG.VALIDATION_ERROR, { message: "Action not found" })
+      );
+    }
+
+    const validated = await validateInput({
+      input: data,
+      schema: updateActionZod,
+      async: true,
+    });
+
+    // config.type must match the action's existing actionType — no type-switching on edit
+    if (validated.config && validated.config.type !== action.actionType) {
+      throw manageGeneralError(
+        overideObj(ERRORSMG.VALIDATION_ERROR, {
+          message: "Action type cannot be changed. Delete and recreate this action instead.",
+        })
+      );
+    }
+
+    const update: any = {};
+    if (validated.name !== undefined) update.name = validated.name;
+    if (validated.description !== undefined) update.description = validated.description;
+
+    if (validated.config) {
+      if (action.actionType === E_ActionTypes.password) {
+        if (validated.config.password) {
+          update["config.passwordHash"] = validated.config.password; // ideally hash
+        }
+      }
+
+      if (action.actionType === E_ActionTypes.formdata) {
+        const oldFields: any[] = (action.config as any)?.fields ?? [];
+        const newFields: any[] = validated.config.fields;
+        const newNames = new Set(newFields.map((f: any) => f.name));
+
+        const droppedUniqueNames = oldFields
+          .filter((f: any) => f.isUnique && !newNames.has(f.name))
+          .map((f: any) => f.name);
+
+        if (droppedUniqueNames.length > 0) {
+          const relatedResourceActions = await ResouceActionModel.find(
+            { action: action._id },
+            { _id: 1 }
+          ).lean();
+          const ids = relatedResourceActions.map(r => r._id);
+
+          if (ids.length > 0) {
+            await ActionUniqueFieldModel.deleteMany({
+              action: { $in: ids },
+              field: { $in: droppedUniqueNames },
+            });
+          }
+        }
+
+        update["config.fields"] = newFields;
+      }
+
+      if (action.actionType === E_ActionTypes.geo || action.actionType === E_ActionTypes.request) {
+        throw manageGeneralError(
+          overideObj(ERRORSMG.VALIDATION_ERROR, {
+            message: `${action.actionType} action editing is not implemented yet`,
+          })
+        );
+      }
+    }
+
+    const updated = await ActionsModel.findByIdAndUpdate(
+      action._id,
+      { $set: update },
+      { new: true }
+    );
+
+    return updated;
+  } catch (e) {
+    console.log("updateaction err",e)
+    manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);
+  }
+};
 
 
 
 
+
+
+
+
+
+
+
+
+
+static deleteActionResponses = async (
+  { ids, resourceActionId }: { ids?: string[]; resourceActionId?: string },
+  user: IUser
+) => {
+  try {
+    if (!ids?.length && !resourceActionId) {
+      throw manageGeneralError(
+        overideObj(ERRORSMG.VALIDATION_ERROR, { message: "Provide response id(s) or a resourceActionId" })
+      );
+    }
+
+    const match: any = { isDeleted: { $ne: true } };
+    if (ids?.length) match._id = { $in: ids.map((id) => new Types.ObjectId(id)) };
+    if (resourceActionId) match.resourceAction = new Types.ObjectId(resourceActionId);
+
+    const responses = await ActionsResponseModel.find(match);
+    if (responses.length === 0) return { success: true, deleted: 0 };
+
+    // ownership check — resourceAction.action.user must be this user
+    const resourceActionIds = [...new Set(responses.map((r) => r.resourceAction.toString()))];
+    const resouceActions = await ResouceActionModel.find({
+      _id: { $in: resourceActionIds.map((id) => new Types.ObjectId(id)) },
+    }).populate("action");
+
+    const ownedResourceActionIds = new Set(
+      resouceActions
+        .filter((ra) => (ra.action as any)?.user?.toString() === user?._id?.toString())
+        .map((ra) => ra._id.toString())
+    );
+
+    const deletable = responses.filter((r) => ownedResourceActionIds.has(r.resourceAction.toString()));
+    if (deletable.length === 0) {
+      throw manageGeneralError(
+        overideObj(ERRORSMG.VALIDATION_ERROR, { message: "No matching responses found for this user" })
+      );
+    }
+
+    // free up unique-field locks tied to these submissions
+    const raMap = new Map(resouceActions.map((ra) => [ra._id.toString(), ra]));
+    const compositeKeysToRelease: string[] = [];
+
+    for (const r of deletable) {
+      const ra = raMap.get(r.resourceAction.toString());
+      const fields: any[] = (ra?.action as any)?.config?.fields ?? [];
+      const uniqueFieldNames = fields.filter((f) => f.isUnique).map((f) => f.name);
+      for (const fname of uniqueFieldNames) {
+        const value = r.responsePayload?.[fname];
+        if (value !== undefined) {
+          compositeKeysToRelease.push(`${r.resourceAction}:${fname}:${value}`);
+        }
+      }
+    }
+
+    const deletableIds = deletable.map((r) => r._id);
+
+    await Promise.all([
+      ActionsResponseModel.deleteMany({ _id: { $in: deletableIds } }),
+      // ActionsResponseModel.deleteMany({ _id: { $in: deletableIds } }, { $set: { isDeleted: true } }),
+      compositeKeysToRelease.length > 0
+        ? ActionUniqueFieldModel.deleteMany(
+            { compositeKey: { $in: compositeKeysToRelease } },
+            // { $set: { isDeleted: true } }
+          )
+        // ? ActionUniqueFieldModel.updateMany(
+        //     { compositeKey: { $in: compositeKeysToRelease } },
+        //     { $set: { isDeleted: true } }
+        //   )
+        : Promise.resolve(),
+    ]);
+
+    return { success: true, deleted: deletableIds.length };
+  } catch (e) {
+    manageGeneralError(e, ERRORSMG.SOMETHING_WENT_WRONG_ERROR);
+  }
+};
 
 }
 
